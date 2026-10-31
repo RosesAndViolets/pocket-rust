@@ -1,0 +1,2534 @@
+{
+ "version": 1,
+ "rustc": "rustc 1.97.0",
+ "lessons": [
+  {
+   "id": "variables",
+   "n": 1,
+   "title": "Variables",
+   "summary": "Your first program: <code>let</code>, <code>mut</code> and printing.",
+   "cards": [
+    {
+     "h": "Every program starts at main",
+     "p": "A Rust program runs the code inside <code>fn main() { }</code>. <code>fn</code> means function. For now, every example lives inside it.",
+     "code": [
+      "fn main() {",
+      "    println!(\"Hello!\");",
+      "}"
+     ],
+     "note": "<code>println!</code> prints a line. The <code>!</code> marks it as a macro, a special kind of function. You don&#x27;t need to know more than that yet."
+    },
+    {
+     "h": "let makes a variable",
+     "p": "<code>let</code> gives a value a name. Put the name in curly braces inside the text to print its value.",
+     "code": [
+      "let age = 30;",
+      "println!(\"{age}\");  // prints 30"
+     ],
+     "note": "Every statement ends with a semicolon. Text after <code>//</code> is a comment: Rust ignores it."
+    },
+    {
+     "h": "Variables can't change unless you say so",
+     "p": "Once set, a variable stays the same. Add <code>mut</code> (short for mutable) to allow a new value later.",
+     "code": [
+      "let mut level = 1;",
+      "level = 2;           // fine, it's mut",
+      "println!(\"{level}\"); // prints 2"
+     ],
+     "note": "Without <code>mut</code>, the compiler stops you. That&#x27;s on purpose: you can trust a value won&#x27;t change behind your back."
+    }
+   ],
+   "problems": [
+    {
+     "id": "variables-1",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "Line 3 gives <code>count</code> a new value, so it has to be declared <code>let mut</code>.",
+     "bad": "Line 3 changes <code>count</code>. Which word lets a variable change? (<code>var</code> is from other languages; Rust doesn&#x27;t have it.)",
+     "lines": [
+      "fn main() {",
+      "    let __ count = 0;",
+      "    count = count + 1;",
+      "    println!(\"{count}\");",
+      "}"
+     ],
+     "bank": [
+      "mut",
+      "var",
+      "const",
+      "let"
+     ],
+     "answer": [
+      "mut"
+     ]
+    },
+    {
+     "id": "variables-2",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>score</code> wasn&#x27;t declared <code>mut</code>, so it can&#x27;t get a new value. The compiler even suggests the fix.",
+     "bad": "That line is fine. Look for the line that tries to change a variable.",
+     "lines": [
+      "fn main() {",
+      "    let score = 10;",
+      "    score = 20;",
+      "    println!(\"{score}\");",
+      "}"
+     ],
+     "answer": 2,
+     "rustc": "error[E0384]: cannot assign twice to immutable variable `score`\n --> src/main.rs:3:5\n  |\n2 |     let score = 10;\n  |         ----- first assignment to `score`\n3 |     score = 20;\n  |     ^^^^^^^^^^ cannot assign twice to immutable variable\n  |\nhelp: consider making this binding mutable\n  |\n2 |     let mut score = 10;\n  |         +++"
+    },
+    {
+     "id": "variables-3",
+     "type": "order",
+     "prompt": "Make the program print 1, then 2.",
+     "good": "Code runs top to bottom: make <code>n</code>, print it, change it, print again.",
+     "bad": "A variable has to exist before you use it, and the change has to happen between the two prints.",
+     "head": [
+      "fn main() {"
+     ],
+     "tail": [
+      "}"
+     ],
+     "pool": [
+      "let mut n = 1;",
+      "println!(\"{n}\");",
+      "n = n + 1;",
+      "println!(\"{n}\");"
+     ],
+     "accept": [
+      [
+       "let mut n = 1;",
+       "println!(\"{n}\");",
+       "n = n + 1;",
+       "println!(\"{n}\");"
+      ]
+     ]
+    },
+    {
+     "id": "variables-4",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "The first print sees 3. Then <code>a</code> becomes 3 × 2, so the second print sees 6.",
+     "bad": "Each print shows the value at that moment. What is <code>a</code> before line 3, and after?",
+     "lines": [
+      "let mut a = 3;",
+      "println!(\"{a}\");",
+      "a = a * 2;",
+      "println!(\"{a}\");"
+     ],
+     "bank": [
+      "3",
+      "5",
+      "6",
+      "9"
+     ],
+     "answer": [
+      "3",
+      "6"
+     ]
+    },
+    {
+     "id": "variables-5",
+     "type": "fill",
+     "prompt": "Make it print 8.",
+     "good": "4 × 2 is 8. Rust uses <code>+ - * /</code> for arithmetic, like most languages.",
+     "bad": "Work out what each operator gives with 4 and 2.",
+     "lines": [
+      "let apples = 4;",
+      "let pears = 2;",
+      "let total = apples __ pears;",
+      "println!(\"{total}\");"
+     ],
+     "bank": [
+      "+",
+      "-",
+      "*",
+      "/"
+     ],
+     "answer": [
+      "*"
+     ]
+    },
+    {
+     "id": "variables-6",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "<code>let mut y = x;</code> copies the number. Changing <code>y</code> later doesn&#x27;t touch <code>x</code>.",
+     "bad": "<code>y</code> starts as a copy of <code>x</code>. Does changing <code>y</code> change <code>x</code>?",
+     "lines": [
+      "let x = 2;",
+      "let mut y = x;",
+      "y = y + 10;",
+      "println!(\"{x}\");",
+      "println!(\"{y}\");"
+     ],
+     "bank": [
+      "0",
+      "2",
+      "10",
+      "12"
+     ],
+     "answer": [
+      "2",
+      "12"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "types",
+   "n": 2,
+   "title": "Numbers and types",
+   "summary": "Whole numbers, decimals, true/false, and why Rust cares.",
+   "cards": [
+    {
+     "h": "Every value has a type",
+     "p": "<code>i32</code> is a whole number, <code>f64</code> a decimal, <code>bool</code> is <code>true</code> or <code>false</code>. Rust usually works out the type itself, but you can write it after a colon.",
+     "code": [
+      "let age: i32 = 30;",
+      "let height: f64 = 1.75;",
+      "let is_ready: bool = true;"
+     ],
+     "note": "<code>i32</code> means a 32-bit integer and <code>f64</code> a 64-bit float. Those are the everyday defaults."
+    },
+    {
+     "h": "Printing any value",
+     "p": "<code>{}</code> in the text is filled with the next value after the comma. Use it when you want to print a calculation directly.",
+     "code": [
+      "println!(\"{}\", 7 / 2);     // 3",
+      "println!(\"{}\", 7 % 2);     // 1",
+      "println!(\"{}\", 7.0 / 2.0); // 3.5"
+     ],
+     "note": "Dividing two whole numbers gives a whole number: the decimal part is dropped. <code>%</code> gives the remainder."
+    },
+    {
+     "h": "Types don't mix on their own",
+     "p": "You can&#x27;t add an <code>i32</code> to an <code>f64</code> directly. Convert one with <code>as</code> first.",
+     "code": [
+      "let whole: i32 = 3;",
+      "let half: f64 = 0.5;",
+      "let total = whole as f64 + half; // 3.5"
+     ],
+     "note": "Rust never converts number types behind your back, so you always see where precision could change."
+    },
+    {
+     "h": "Same name, new variable",
+     "p": "Writing <code>let</code> again with the same name makes a new variable that hides the old one. This is called shadowing.",
+     "code": [
+      "let x = 5;",
+      "let x = x + 1;      // a new x, made from the old one",
+      "println!(\"{x}\");    // prints 6"
+     ],
+     "note": "Shadowing is different from <code>mut</code>: each <code>let</code> makes a fresh variable, so it can even have a new type."
+    }
+   ],
+   "problems": [
+    {
+     "id": "types-1",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "7 / 2 with whole numbers is 3 (the .5 is dropped), and 7 % 2 is the remainder, 1.",
+     "bad": "Both numbers are whole, so the answer to 7 / 2 is whole too. <code>%</code> is the remainder.",
+     "lines": [
+      "println!(\"{}\", 7 / 2);",
+      "println!(\"{}\", 7 % 2);"
+     ],
+     "bank": [
+      "0",
+      "1",
+      "3",
+      "3.5"
+     ],
+     "answer": [
+      "3",
+      "1"
+     ]
+    },
+    {
+     "id": "types-2",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "An <code>i32</code> can&#x27;t be added to an <code>f64</code>. One of them has to be converted with <code>as</code> first.",
+     "bad": "That line is fine on its own. Look for where two different types meet.",
+     "lines": [
+      "fn main() {",
+      "    let apples: i32 = 3;",
+      "    let weight: f64 = 1.5;",
+      "    let total = apples + weight;",
+      "    println!(\"{total}\");",
+      "}"
+     ],
+     "answer": 3,
+     "rustc": "error[E0277]: cannot add `f64` to `i32`\n --> src/main.rs:4:24\n  |\n4 |     let total = apples + weight;\n  |                        ^ no implementation for `i32 + f64`\n  |\n  = help: the trait `Add<f64>` is not implemented for `i32`\nhelp: the following other types implement trait `Add<Rhs>`\n --> /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/ops/arith.rs:98:8\n  |\n  = note: `i32` implements `Add`\n ::: /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/ops/arith.rs:113:0\n  |\n  = note: in this macro invocation\n --> /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/internal_macros.rs:22:8\n  |\n  = note: `&i32` implements `Add<i32>`\n ::: /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/internal_macros.rs:33:8\n  |\n  = note: `i32` implements `Add<&i32>`\n ::: /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/internal_macros.rs:44:8\n  |\n  = note: `&i32` implements `Add`\n  = note: this error originates in the macro `add_impl` (in Nightly builds, run with -Z macro-backtrace for more info)"
+    },
+    {
+     "id": "types-3",
+     "type": "fill",
+     "prompt": "Make this compile and print 4.5.",
+     "good": "<code>apples as f64</code> turns 3 into 3.0, so it can be added to 1.5.",
+     "bad": "Rust converts number types with one short keyword.",
+     "lines": [
+      "let apples: i32 = 3;",
+      "let weight: f64 = 1.5;",
+      "let total = apples __ f64 + weight;",
+      "println!(\"{total}\");"
+     ],
+     "bank": [
+      "as",
+      "to",
+      "into",
+      "in"
+     ],
+     "answer": [
+      "as"
+     ]
+    },
+    {
+     "id": "types-4",
+     "type": "fill",
+     "prompt": "Fill in the type.",
+     "good": "<code>true</code> and <code>false</code> are <code>bool</code> values.",
+     "bad": "<code>true</code> is a value, not a type. Which type holds yes/no values?",
+     "lines": [
+      "let is_open: __ = true;",
+      "println!(\"{is_open}\");"
+     ],
+     "bank": [
+      "bool",
+      "i32",
+      "f64",
+      "true"
+     ],
+     "answer": [
+      "bool"
+     ]
+    },
+    {
+     "id": "types-5",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "Each <code>let x</code> makes a new <code>x</code> from the previous one: 5, then 10, then 11.",
+     "bad": "Follow each line in turn. Each new <code>x</code> is built from the one before.",
+     "lines": [
+      "let x = 5;",
+      "let x = x * 2;",
+      "let x = x + 1;",
+      "println!(\"{x}\");"
+     ],
+     "bank": [
+      "5",
+      "6",
+      "10",
+      "11"
+     ],
+     "answer": [
+      "11"
+     ]
+    },
+    {
+     "id": "types-6",
+     "type": "order",
+     "prompt": "Make the program print 2.5.",
+     "good": "Both numbers must exist before you divide them, and the print comes last. <code>total</code> and <code>count</code> can go in either order.",
+     "bad": "Each variable has to be made before a line uses it.",
+     "head": [
+      "fn main() {"
+     ],
+     "tail": [
+      "}"
+     ],
+     "pool": [
+      "let total: i32 = 5;",
+      "let count: i32 = 2;",
+      "let avg = total as f64 / count as f64;",
+      "println!(\"{avg}\");"
+     ],
+     "accept": [
+      [
+       "let total: i32 = 5;",
+       "let count: i32 = 2;",
+       "let avg = total as f64 / count as f64;",
+       "println!(\"{avg}\");"
+      ],
+      [
+       "let count: i32 = 2;",
+       "let total: i32 = 5;",
+       "let avg = total as f64 / count as f64;",
+       "println!(\"{avg}\");"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "functions",
+   "n": 3,
+   "title": "Functions",
+   "summary": "Write your own functions and return values from them.",
+   "cards": [
+    {
+     "h": "Make your own function",
+     "p": "Write <code>fn</code>, a name, <code>()</code> and a body in braces. Call it by its name followed by <code>()</code>.",
+     "code": [
+      "fn greet() {",
+      "    println!(\"Hi!\");",
+      "}",
+      "",
+      "fn main() {",
+      "    greet();",
+      "}"
+     ],
+     "note": "A function can be written above or below <code>main</code>. Rust finds it either way."
+    },
+    {
+     "h": "Parameters need types",
+     "p": "Inputs go inside the parentheses, each with its type. Rust always asks for parameter types.",
+     "code": [
+      "fn show(n: i32) {",
+      "    println!(\"{n}\");",
+      "}",
+      "",
+      "fn main() {",
+      "    show(5);",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "Returning a value",
+     "p": "<code>-&gt; i32</code> says what the function gives back. The last line, written without a semicolon, is the value returned.",
+     "code": [
+      "fn double(n: i32) -> i32 {",
+      "    n * 2",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", double(4)); // 8",
+      "}"
+     ],
+     "note": "In Rust, a block&#x27;s last expression is its value. No <code>return</code> needed."
+    },
+    {
+     "h": "The semicolon matters",
+     "p": "<code>n * 2;</code> with a semicolon is a statement, so it gives back nothing. The compiler will tell you the types don&#x27;t match. <code>return</code> also works, usually to leave a function early.",
+     "code": [
+      "fn triple(n: i32) -> i32 {",
+      "    return n * 3;",
+      "}"
+     ],
+     "note": "Most Rust code uses the no-semicolon style for the final value."
+    }
+   ],
+   "problems": [
+    {
+     "id": "functions-1",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "<code>-&gt; i32</code> names the type a function returns.",
+     "bad": "The return type follows a small arrow.",
+     "lines": [
+      "fn add(a: i32, b: i32) __ i32 {",
+      "    a + b",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", add(2, 3));",
+      "}"
+     ],
+     "bank": [
+      "->",
+      ":",
+      "=",
+      "<-"
+     ],
+     "answer": [
+      "->"
+     ]
+    },
+    {
+     "id": "functions-2",
+     "type": "error",
+     "prompt": "Which line causes the problem?",
+     "good": "The semicolon turns <code>n * n</code> into a statement, so the function gives back nothing instead of an <code>i32</code>. The compiler suggests removing it.",
+     "bad": "Look closely at how the function ends.",
+     "lines": [
+      "fn square(n: i32) -> i32 {",
+      "    n * n;",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", square(4));",
+      "}"
+     ],
+     "answer": 1,
+     "rustc": "error[E0308]: mismatched types\n --> src/main.rs:1:22\n  |\n1 | fn square(n: i32) -> i32 {\n  |    ------            ^^^ expected `i32`, found `()`\n  |    |\n  |    implicitly returns `()` as its body has no tail or `return` expression\n2 |     n * n;\n  |          - help: remove this semicolon to return this value"
+    },
+    {
+     "id": "functions-3",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "<code>double(3)</code> is 6, and <code>double(6)</code> is 12.",
+     "bad": "<code>b</code> is made by doubling <code>a</code>, not 3.",
+     "lines": [
+      "fn double(n: i32) -> i32 {",
+      "    n * 2",
+      "}",
+      "",
+      "fn main() {",
+      "    let a = double(3);",
+      "    let b = double(a);",
+      "    println!(\"{a}\");",
+      "    println!(\"{b}\");",
+      "}"
+     ],
+     "bank": [
+      "3",
+      "6",
+      "9",
+      "12"
+     ],
+     "answer": [
+      "6",
+      "12"
+     ]
+    },
+    {
+     "id": "functions-4",
+     "type": "order",
+     "prompt": "Make the program print 12.",
+     "good": "Both sizes exist before calling <code>area</code>, and the print comes last.",
+     "bad": "<code>area(w, h)</code> needs <code>w</code> and <code>h</code> to exist already.",
+     "head": [
+      "fn main() {"
+     ],
+     "tail": [
+      "}",
+      "",
+      "fn area(w: i32, h: i32) -> i32 {",
+      "    w * h",
+      "}"
+     ],
+     "pool": [
+      "let w = 3;",
+      "let h = 4;",
+      "let a = area(w, h);",
+      "println!(\"{a}\");"
+     ],
+     "accept": [
+      [
+       "let w = 3;",
+       "let h = 4;",
+       "let a = area(w, h);",
+       "println!(\"{a}\");"
+      ],
+      [
+       "let h = 4;",
+       "let w = 3;",
+       "let a = area(w, h);",
+       "println!(\"{a}\");"
+      ]
+     ]
+    },
+    {
+     "id": "functions-5",
+     "type": "fill",
+     "prompt": "Fill in the return type.",
+     "good": "Half of an <code>f64</code> is still an <code>f64</code>: 2.5.",
+     "bad": "What type is <code>n / 2.0</code> when <code>n</code> is an <code>f64</code>?",
+     "lines": [
+      "fn half(n: f64) -> __ {",
+      "    n / 2.0",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", half(5.0));",
+      "}"
+     ],
+     "bank": [
+      "f64",
+      "i32",
+      "bool",
+      "()"
+     ],
+     "answer": [
+      "f64"
+     ]
+    },
+    {
+     "id": "functions-6",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "<code>add_one</code> runs twice on 5: 6, then 7.",
+     "bad": "<code>twice</code> doesn&#x27;t double. It calls <code>add_one</code> two times.",
+     "lines": [
+      "fn add_one(n: i32) -> i32 {",
+      "    n + 1",
+      "}",
+      "",
+      "fn twice(n: i32) -> i32 {",
+      "    add_one(add_one(n))",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", twice(5));",
+      "}"
+     ],
+     "bank": [
+      "6",
+      "7",
+      "10",
+      "12"
+     ],
+     "answer": [
+      "7"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "control",
+   "n": 4,
+   "title": "Decisions and loops",
+   "summary": "<code>if</code>, <code>loop</code>, <code>while</code> and <code>for</code>.",
+   "cards": [
+    {
+     "h": "if chooses a path",
+     "p": "<code>if</code> runs a block when its condition is true; <code>else</code> runs otherwise. No parentheses needed around the condition.",
+     "code": [
+      "let temp = 30;",
+      "if temp > 25 {",
+      "    println!(\"hot\");",
+      "} else {",
+      "    println!(\"fine\");",
+      "}"
+     ],
+     "note": "Compare with <code>==</code> <code>!=</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code>. Join conditions with <code>&amp;&amp;</code> (and) or <code>||</code> (or)."
+    },
+    {
+     "h": "if gives back a value",
+     "p": "Like a function body, each branch&#x27;s last expression is its value, so <code>if</code> can set a variable. Both branches must give the same type.",
+     "code": [
+      "let n = 4;",
+      "let size = if n > 3 { \"big\" } else { \"small\" };",
+      "println!(\"{size}\"); // big"
+     ],
+     "note": null
+    },
+    {
+     "h": "Repeat with loop and while",
+     "p": "<code>loop</code> repeats forever until <code>break</code>. <code>while</code> repeats as long as its condition is true.",
+     "code": [
+      "let mut n = 0;",
+      "while n < 3 {",
+      "    n += 1;",
+      "}",
+      "println!(\"{n}\"); // 3"
+     ],
+     "note": "<code>n += 1</code> is short for <code>n = n + 1</code>. <code>-=</code> and <code>*=</code> work the same way."
+    },
+    {
+     "h": "Count with for",
+     "p": "<code>for</code> walks through a range. <code>1..4</code> means 1, 2, 3: it stops before 4. <code>1..=4</code> includes the 4.",
+     "code": [
+      "for i in 1..4 {",
+      "    println!(\"{i}\"); // 1, then 2, then 3",
+      "}"
+     ],
+     "note": null
+    }
+   ],
+   "problems": [
+    {
+     "id": "control-1",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "<code>1..4</code> stops before 4, so it prints 1, 2, 3.",
+     "bad": "A range with <code>..</code> doesn&#x27;t include its end.",
+     "lines": [
+      "for i in 1..4 {",
+      "    println!(\"{i}\");",
+      "}"
+     ],
+     "bank": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4"
+     ],
+     "answer": [
+      "1",
+      "2",
+      "3"
+     ]
+    },
+    {
+     "id": "control-2",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "An <code>if</code> needs a <code>bool</code>. A number is not true or false in Rust. You&#x27;d write something like <code>if n &gt; 0</code>.",
+     "bad": "Look at what the <code>if</code> is checking.",
+     "lines": [
+      "fn main() {",
+      "    let n = 5;",
+      "    if n {",
+      "        println!(\"yes\");",
+      "    }",
+      "}"
+     ],
+     "answer": 2,
+     "rustc": "error[E0308]: mismatched types\n --> src/main.rs:3:8\n  |\n3 |     if n {\n  |        ^ expected `bool`, found integer"
+    },
+    {
+     "id": "control-3",
+     "type": "fill",
+     "prompt": "Print 1 to 5.",
+     "good": "<code>1..=5</code> includes the 5.",
+     "bad": "<code>1..5</code> would stop at 4. Which range includes its end?",
+     "lines": [
+      "for i in 1__5 {",
+      "    println!(\"{i}\");",
+      "}"
+     ],
+     "bank": [
+      "..=",
+      "..",
+      "to",
+      "-"
+     ],
+     "answer": [
+      "..="
+     ]
+    },
+    {
+     "id": "control-4",
+     "type": "order",
+     "prompt": "Count down: print 3, 2, 1.",
+     "good": "Print first, then subtract. Swapping those two would print 2, 1, 0.",
+     "bad": "Think about whether the print should happen before or after <code>n</code> goes down.",
+     "head": [
+      "fn main() {"
+     ],
+     "tail": [
+      "}"
+     ],
+     "pool": [
+      "let mut n = 3;",
+      "while n > 0 {",
+      "println!(\"{n}\");",
+      "n -= 1;",
+      "}"
+     ],
+     "accept": [
+      [
+       "let mut n = 3;",
+       "while n > 0 {",
+       "println!(\"{n}\");",
+       "n -= 1;",
+       "}"
+      ]
+     ]
+    },
+    {
+     "id": "control-5",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "7 % 2 is 1, not 0, so the <code>else</code> branch gives <code>&quot;odd&quot;</code>.",
+     "bad": "<code>n % 2 == 0</code> checks for an even number. Is 7 even?",
+     "lines": [
+      "let n = 7;",
+      "let kind = if n % 2 == 0 { \"even\" } else { \"odd\" };",
+      "println!(\"{kind}\");"
+     ],
+     "bank": [
+      "even",
+      "odd",
+      "7",
+      "1"
+     ],
+     "answer": [
+      "odd"
+     ]
+    },
+    {
+     "id": "control-6",
+     "type": "fill",
+     "prompt": "Make it print \"sorry\".",
+     "good": "With <code>&amp;&amp;</code> both must be true. There&#x27;s no ticket, so it&#x27;s &quot;sorry&quot;.",
+     "bad": "Which operator needs both sides to be true?",
+     "lines": [
+      "let age = 20;",
+      "let has_ticket = false;",
+      "if age >= 18 __ has_ticket {",
+      "    println!(\"come in\");",
+      "} else {",
+      "    println!(\"sorry\");",
+      "}"
+     ],
+     "bank": [
+      "&&",
+      "||",
+      "and",
+      "+"
+     ],
+     "answer": [
+      "&&"
+     ]
+    },
+    {
+     "id": "control-7",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "count goes 2, 4, 6. At 6 it&#x27;s finally more than 5, so the loop stops.",
+     "bad": "Step through: add 2, then check. When is it first more than 5?",
+     "lines": [
+      "let mut count = 0;",
+      "loop {",
+      "    count += 2;",
+      "    if count > 5 {",
+      "        break;",
+      "    }",
+      "}",
+      "println!(\"{count}\");"
+     ],
+     "bank": [
+      "4",
+      "5",
+      "6",
+      "8"
+     ],
+     "answer": [
+      "6"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "text",
+   "n": 5,
+   "title": "Text",
+   "summary": "<code>String</code> and <code>&amp;str</code>, and how to grow text.",
+   "cards": [
+    {
+     "h": "Two kinds of text",
+     "p": "Text in quotes, like <code>&quot;hi&quot;</code>, is a <code>&amp;str</code>: fixed text built into the program. A <code>String</code> is text you can change and grow.",
+     "code": [
+      "let fixed = \"hello\";              // &str",
+      "let name = String::from(\"Ana\");   // String"
+     ],
+     "note": "<code>String::from</code> is a function that belongs to the <code>String</code> type. The <code>::</code> means &quot;belongs to&quot;. Lesson 8 explains it fully."
+    },
+    {
+     "h": "Growing a String",
+     "p": "Call methods on a value with a dot. <code>push_str</code> adds text to the end. Since that changes the String, the variable must be <code>mut</code>.",
+     "code": [
+      "let mut s = String::from(\"Hi\");",
+      "s.push_str(\", Ana\");",
+      "println!(\"{s}\"); // Hi, Ana"
+     ],
+     "note": null
+    },
+    {
+     "h": "Measuring text",
+     "p": "<code>.len()</code> gives the length in bytes. For plain English letters that&#x27;s the number of letters.",
+     "code": [
+      "let word = String::from(\"crab\");",
+      "println!(\"{}\", word.len()); // 4"
+     ],
+     "note": "Letters with accents or emoji take more than one byte each. That&#x27;s why it&#x27;s called bytes, not letters."
+    }
+   ],
+   "problems": [
+    {
+     "id": "text-1",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "<code>push_str</code> changes the String, so the variable needs <code>mut</code>.",
+     "bad": "Line 2 changes <code>greeting</code>. What does a variable need to allow that?",
+     "lines": [
+      "let __ greeting = String::from(\"Hello\");",
+      "greeting.push_str(\"!\");",
+      "println!(\"{greeting}\");"
+     ],
+     "bank": [
+      "mut",
+      "&",
+      "const",
+      "String"
+     ],
+     "answer": [
+      "mut"
+     ]
+    },
+    {
+     "id": "text-2",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>push_str</code> changes <code>name</code>, but <code>name</code> isn&#x27;t <code>mut</code>. Same rule as numbers.",
+     "bad": "Which line tries to change the text?",
+     "lines": [
+      "fn main() {",
+      "    let name = String::from(\"Kim\");",
+      "    name.push_str(\" Lee\");",
+      "    println!(\"{name}\");",
+      "}"
+     ],
+     "answer": 2,
+     "rustc": "error[E0596]: cannot borrow `name` as mutable, as it is not declared as mutable\n --> src/main.rs:3:5\n  |\n3 |     name.push_str(\" Lee\");\n  |     ^^^^ cannot borrow as mutable\n  |\nhelp: consider changing this to be mutable\n  |\n2 |     let mut name = String::from(\"Kim\");\n  |         +++"
+    },
+    {
+     "id": "text-3",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "&quot;crab&quot; has 4 letters, so 4 bytes.",
+     "bad": "<code>.len()</code> counts the letters here.",
+     "lines": [
+      "let word = String::from(\"crab\");",
+      "println!(\"{}\", word.len());"
+     ],
+     "bank": [
+      "3",
+      "4",
+      "5",
+      "crab"
+     ],
+     "answer": [
+      "4"
+     ]
+    },
+    {
+     "id": "text-4",
+     "type": "fill",
+     "prompt": "Make it print \"hello world\".",
+     "good": "<code>push_str</code> adds a piece of text to the end.",
+     "bad": "Which method adds text to a String?",
+     "lines": [
+      "let mut s = String::from(\"hello\");",
+      "s.__(\" world\");",
+      "println!(\"{s}\");"
+     ],
+     "bank": [
+      "push_str",
+      "push",
+      "add",
+      "len"
+     ],
+     "answer": [
+      "push_str"
+     ]
+    },
+    {
+     "id": "text-5",
+     "type": "order",
+     "prompt": "Make the program print \"Hi, Sam!\".",
+     "good": "Make the String, add the pieces in order, then print it.",
+     "bad": "The pieces are added to the end, one after another.",
+     "head": [
+      "fn main() {"
+     ],
+     "tail": [
+      "}"
+     ],
+     "pool": [
+      "let mut msg = String::from(\"Hi\");",
+      "msg.push_str(\", Sam\");",
+      "msg.push_str(\"!\");",
+      "println!(\"{msg}\");"
+     ],
+     "accept": [
+      [
+       "let mut msg = String::from(\"Hi\");",
+       "msg.push_str(\", Sam\");",
+       "msg.push_str(\"!\");",
+       "println!(\"{msg}\");"
+      ]
+     ]
+    },
+    {
+     "id": "text-6",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "After the push, <code>s</code> is &quot;abcd&quot;: 4 letters long.",
+     "bad": "The length is measured after <code>push_str</code> runs.",
+     "lines": [
+      "let mut s = String::from(\"ab\");",
+      "s.push_str(\"cd\");",
+      "println!(\"{}\", s.len());",
+      "println!(\"{s}\");"
+     ],
+     "bank": [
+      "2",
+      "4",
+      "ab",
+      "abcd"
+     ],
+     "answer": [
+      "4",
+      "abcd"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ownership",
+   "n": 6,
+   "title": "Ownership",
+   "summary": "Why each value has exactly one owner.",
+   "cards": [
+    {
+     "h": "One owner at a time",
+     "p": "Every value is owned by one variable. When the owner&#x27;s block ends at <code>}</code>, the value is cleaned up automatically.",
+     "code": [
+      "{",
+      "    let s = String::from(\"hi\");",
+      "    println!(\"{s}\");",
+      "}   // s is cleaned up here"
+     ],
+     "note": "This is how Rust manages memory without a garbage collector."
+    },
+    {
+     "h": "Assigning moves a String",
+     "p": "<code>let b = a;</code> moves the String into <code>b</code>. Now <code>b</code> is the owner, and <code>a</code> can&#x27;t be used any more.",
+     "code": [
+      "let a = String::from(\"hi\");",
+      "let b = a;          // moved",
+      "println!(\"{b}\");    // fine",
+      "// println!(\"{a}\"); would not compile"
+     ],
+     "note": null
+    },
+    {
+     "h": "Small values are copied",
+     "p": "Numbers and <code>bool</code> are small, so assigning copies them instead. Both variables stay usable.",
+     "code": [
+      "let x = 5;",
+      "let y = x;          // copied",
+      "println!(\"{x} {y}\"); // 5 5"
+     ],
+     "note": null
+    },
+    {
+     "h": "clone makes a real copy",
+     "p": "To keep both Strings, call <code>.clone()</code>. It copies the text into a new String with its own owner.",
+     "code": [
+      "let a = String::from(\"hi\");",
+      "let b = a.clone();",
+      "println!(\"{a} {b}\"); // hi hi"
+     ],
+     "note": "Passing a String into a function moves it too, just like <code>let b = a;</code>."
+    }
+   ],
+   "problems": [
+    {
+     "id": "ownership-1",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>let t = s;</code> moved the String into <code>t</code>. After a move, <code>s</code> can&#x27;t be used.",
+     "bad": "That line is fine. Follow who owns the String after line 3.",
+     "lines": [
+      "fn main() {",
+      "    let s = String::from(\"hi\");",
+      "    let t = s;",
+      "    println!(\"{t}\");",
+      "    println!(\"{s}\");",
+      "}"
+     ],
+     "answer": 4,
+     "rustc": "error[E0382]: borrow of moved value: `s`\n --> src/main.rs:5:16\n  |\n2 |     let s = String::from(\"hi\");\n  |         - move occurs because `s` has type `String`, which does not implement the `Copy` trait\n3 |     let t = s;\n  |             - value moved here\n4 |     println!(\"{t}\");\n5 |     println!(\"{s}\");\n  |                ^ value borrowed here after move\n  |\nhelp: consider cloning the value if the performance cost is acceptable\n  |\n3 |     let t = s.clone();\n  |              ++++++++"
+    },
+    {
+     "id": "ownership-2",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "<code>.clone()</code> makes a second String, so <code>s</code> keeps its own.",
+     "bad": "You need a real copy so both variables have text.",
+     "lines": [
+      "let s = String::from(\"hi\");",
+      "let t = s.__();",
+      "println!(\"{s}\");",
+      "println!(\"{t}\");"
+     ],
+     "bank": [
+      "clone",
+      "copy",
+      "move",
+      "len"
+     ],
+     "answer": [
+      "clone"
+     ]
+    },
+    {
+     "id": "ownership-3",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "Numbers are copied, so <code>a</code> is still 5 and only <code>b</code> changes.",
+     "bad": "Is a number moved or copied?",
+     "lines": [
+      "let a = 5;",
+      "let mut b = a;",
+      "b += 1;",
+      "println!(\"{a} {b}\");"
+     ],
+     "bank": [
+      "5 6",
+      "6 6",
+      "5 5",
+      "won't compile"
+     ],
+     "answer": [
+      "5 6"
+     ]
+    },
+    {
+     "id": "ownership-4",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "The first call moved <code>word</code> into the function. There&#x27;s nothing left to pass the second time.",
+     "bad": "Calling a function with a String moves it. Which call has nothing left to give?",
+     "lines": [
+      "fn shout(text: String) {",
+      "    println!(\"{text}!\");",
+      "}",
+      "",
+      "fn main() {",
+      "    let word = String::from(\"hey\");",
+      "    shout(word);",
+      "    shout(word);",
+      "}"
+     ],
+     "answer": 7,
+     "rustc": "error[E0382]: use of moved value: `word`\n --> src/main.rs:8:11\n  |\n6 |     let word = String::from(\"hey\");\n  |         ---- move occurs because `word` has type `String`, which does not implement the `Copy` trait\n7 |     shout(word);\n  |           ---- value moved here\n8 |     shout(word);\n  |           ^^^^ value used here after move\n  |\nnote: consider changing this parameter type in function `shout` to borrow instead if owning the value isn't necessary\n --> src/main.rs:1:16\n  |\n1 | fn shout(text: String) {\n  |    -----       ^^^^^^ this parameter takes ownership of the value\n  |    |\n  |    in this function\nhelp: consider cloning the value if the performance cost is acceptable\n  |\n7 |     shout(word.clone());\n  |               ++++++++"
+    },
+    {
+     "id": "ownership-5",
+     "type": "order",
+     "prompt": "Print the text from a, then from b.",
+     "good": "Use <code>a</code> before the move. After <code>let b = a;</code> only <code>b</code> works.",
+     "bad": "Once <code>a</code> is moved into <code>b</code>, <code>a</code> can&#x27;t be printed.",
+     "head": [
+      "fn main() {"
+     ],
+     "tail": [
+      "}"
+     ],
+     "pool": [
+      "let a = String::from(\"x\");",
+      "println!(\"{a}\");",
+      "let b = a;",
+      "println!(\"{b}\");"
+     ],
+     "accept": [
+      [
+       "let a = String::from(\"x\");",
+       "println!(\"{a}\");",
+       "let b = a;",
+       "println!(\"{b}\");"
+      ]
+     ]
+    },
+    {
+     "id": "ownership-6",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "The inner <code>x</code> only lives inside the braces. After <code>}</code>, the outer <code>x</code> (1) is back.",
+     "bad": "A variable made inside <code>{ }</code> disappears at the <code>}</code>.",
+     "lines": [
+      "let x = 1;",
+      "{",
+      "    let x = 2;",
+      "    println!(\"{x}\");",
+      "}",
+      "println!(\"{x}\");"
+     ],
+     "bank": [
+      "1",
+      "2"
+     ],
+     "answer": [
+      "2",
+      "1"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "borrowing",
+   "n": 7,
+   "title": "Borrowing",
+   "summary": "Use a value without taking it: <code>&amp;</code> and <code>&amp;mut</code>.",
+   "cards": [
+    {
+     "h": "Borrow instead of taking",
+     "p": "<code>&amp;s</code> lends <code>s</code> out without moving it. A function that takes <code>&amp;String</code> can read the text, and the caller keeps it.",
+     "code": [
+      "fn count(text: &String) -> usize {",
+      "    text.len()",
+      "}",
+      "",
+      "fn main() {",
+      "    let s = String::from(\"hello\");",
+      "    let n = count(&s);",
+      "    println!(\"{s} has {n} letters\");",
+      "}"
+     ],
+     "note": "<code>usize</code> is a whole-number type for sizes and counts. <code>.len()</code> returns one."
+    },
+    {
+     "h": "&str takes any text",
+     "p": "A <code>&amp;str</code> parameter accepts both quoted text and a borrowed String, so it&#x27;s the usual choice for reading text.",
+     "code": [
+      "fn hello(name: &str) {",
+      "    println!(\"Hi {name}\");",
+      "}",
+      "",
+      "fn main() {",
+      "    let owned = String::from(\"Ana\");",
+      "    hello(&owned);",
+      "    hello(\"Bo\");",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "&mut lets a borrower change it",
+     "p": "<code>&amp;mut</code> is a borrow that&#x27;s allowed to change the value. The variable itself must also be <code>mut</code>.",
+     "code": [
+      "fn add_bang(s: &mut String) {",
+      "    s.push_str(\"!\");",
+      "}",
+      "",
+      "fn main() {",
+      "    let mut s = String::from(\"hi\");",
+      "    add_bang(&mut s);",
+      "    println!(\"{s}\"); // hi!",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "One writer or many readers",
+     "p": "At any moment you can have one <code>&amp;mut</code> borrow, or any number of <code>&amp;</code> borrows, but not both. This rule stops two parts of a program from changing the same data at once.",
+     "code": [
+      "let mut s = String::from(\"a\");",
+      "let r1 = &s;",
+      "let r2 = &s;          // fine: two readers",
+      "println!(\"{r1} {r2}\");",
+      "let w = &mut s;       // fine: readers are done",
+      "w.push_str(\"b\");"
+     ],
+     "note": "A borrow counts as &quot;in use&quot; until its last use, not until the end of the block."
+    }
+   ],
+   "problems": [
+    {
+     "id": "borrowing-1",
+     "type": "fill",
+     "prompt": "Fill in the parameter type.",
+     "good": "<code>shout</code> borrows with <code>&amp;String</code>, so <code>word</code> can be lent out again.",
+     "bad": "The calls pass <code>&amp;word</code>. Which type matches a plain borrow?",
+     "lines": [
+      "fn shout(text: __) {",
+      "    println!(\"{text}!\");",
+      "}",
+      "",
+      "fn main() {",
+      "    let word = String::from(\"hey\");",
+      "    shout(&word);",
+      "    shout(&word);",
+      "}"
+     ],
+     "bank": [
+      "&String",
+      "String",
+      "&mut String",
+      "mut String"
+     ],
+     "answer": [
+      "&String"
+     ]
+    },
+    {
+     "id": "borrowing-2",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>r1</code> is still in use (line 5) when <code>r2</code> asks for a second <code>&amp;mut</code>. Only one writer at a time.",
+     "bad": "Look for where a second changing borrow starts while the first is still in use.",
+     "lines": [
+      "fn main() {",
+      "    let mut s = String::from(\"a\");",
+      "    let r1 = &mut s;",
+      "    let r2 = &mut s;",
+      "    r1.push_str(\"b\");",
+      "    r2.push_str(\"c\");",
+      "}"
+     ],
+     "answer": 3,
+     "rustc": "error[E0499]: cannot borrow `s` as mutable more than once at a time\n --> src/main.rs:4:14\n  |\n3 |     let r1 = &mut s;\n  |              ------ first mutable borrow occurs here\n4 |     let r2 = &mut s;\n  |              ^^^^^^ second mutable borrow occurs here\n5 |     r1.push_str(\"b\");\n  |     -- first borrow later used here"
+    },
+    {
+     "id": "borrowing-3",
+     "type": "fill",
+     "prompt": "Make it print \"hi!\".",
+     "good": "The function asks for <code>&amp;mut String</code>, so you lend it with <code>&amp;mut s</code>.",
+     "bad": "Match what the function&#x27;s parameter asks for.",
+     "lines": [
+      "fn add_bang(s: &mut String) {",
+      "    s.push_str(\"!\");",
+      "}",
+      "",
+      "fn main() {",
+      "    let mut s = String::from(\"hi\");",
+      "    add_bang(__);",
+      "    println!(\"{s}\");",
+      "}"
+     ],
+     "bank": [
+      "&mut s",
+      "&s",
+      "s",
+      "mut s"
+     ],
+     "answer": [
+      "&mut s"
+     ]
+    },
+    {
+     "id": "borrowing-4",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "<code>len_of</code> only borrows <code>a</code>, so <code>a</code> is still usable afterwards.",
+     "bad": "<code>&amp;a</code> lends the String. Does the caller still have it?",
+     "lines": [
+      "fn len_of(t: &str) -> usize {",
+      "    t.len()",
+      "}",
+      "",
+      "fn main() {",
+      "    let a = String::from(\"rust\");",
+      "    let n = len_of(&a);",
+      "    println!(\"{n} {a}\");",
+      "}"
+     ],
+     "bank": [
+      "4 rust",
+      "rust 4",
+      "4",
+      "won't compile"
+     ],
+     "answer": [
+      "4 rust"
+     ]
+    },
+    {
+     "id": "borrowing-5",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "<code>r</code> is still reading <code>s</code> when <code>push_str</code> tries to change it. Readers and a writer can&#x27;t overlap.",
+     "bad": "<code>r</code> is used on the last line, so the borrow is still active when <code>s</code> changes.",
+     "lines": [
+      "let mut s = String::from(\"hi\");",
+      "let r = &s;",
+      "s.push_str(\"!\");",
+      "println!(\"{r}\");"
+     ],
+     "bank": [
+      "hi",
+      "hi!",
+      "won't compile"
+     ],
+     "answer": [
+      "won't compile"
+     ],
+     "rustc": "error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immutable\n --> src/main.rs:4:5\n  |\n3 |     let r = &s;\n  |             -- immutable borrow occurs here\n4 |     s.push_str(\"!\");\n  |     ^^^^^^^^^^^^^^^ mutable borrow occurs here\n5 |     println!(\"{r}\");\n  |                - immutable borrow later used here"
+    },
+    {
+     "id": "borrowing-6",
+     "type": "order",
+     "prompt": "Make it print \"Ada Lovelace\", then 12.",
+     "good": "Make the String, lend it to <code>add_title</code> to change, then print.",
+     "bad": "The name has to be changed before it&#x27;s printed.",
+     "head": [
+      "fn main() {"
+     ],
+     "tail": [
+      "}",
+      "",
+      "fn add_title(n: &mut String) {",
+      "    n.push_str(\" Lovelace\");",
+      "}"
+     ],
+     "pool": [
+      "let mut name = String::from(\"Ada\");",
+      "add_title(&mut name);",
+      "println!(\"{name}\");",
+      "println!(\"{}\", name.len());"
+     ],
+     "accept": [
+      [
+       "let mut name = String::from(\"Ada\");",
+       "add_title(&mut name);",
+       "println!(\"{name}\");",
+       "println!(\"{}\", name.len());"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "structs",
+   "n": 8,
+   "title": "Structs and methods",
+   "summary": "Your own types, and what <code>Type::new()</code> means.",
+   "cards": [
+    {
+     "h": "Group data with struct",
+     "p": "A <code>struct</code> is your own type with named fields. Make one by giving every field a value; read a field with a dot.",
+     "code": [
+      "struct Point {",
+      "    x: i32,",
+      "    y: i32,",
+      "}",
+      "",
+      "fn main() {",
+      "    let p = Point { x: 1, y: 2 };",
+      "    println!(\"{}\", p.x); // 1",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "Methods live in impl",
+     "p": "Functions inside <code>impl Point { }</code> belong to <code>Point</code>. A method&#x27;s first parameter is <code>&amp;self</code>: a borrow of the value it&#x27;s called on.",
+     "code": [
+      "impl Point {",
+      "    fn total(&self) -> i32 {",
+      "        self.x + self.y",
+      "    }",
+      "}",
+      "// p.total() gives 3"
+     ],
+     "note": "Use <code>&amp;mut self</code> for a method that changes the value. The variable must then be <code>mut</code>."
+    },
+    {
+     "h": "Type::new() explained",
+     "p": "A function in <code>impl</code> with no <code>self</code> is called on the type with <code>::</code>. By convention a function that builds a new value is called <code>new</code>. <code>Self</code> is shorthand for the type&#x27;s own name.",
+     "code": [
+      "impl Point {",
+      "    fn new(x: i32, y: i32) -> Self {",
+      "        Point { x: x, y: y }",
+      "    }",
+      "}",
+      "// let p = Point::new(1, 2);"
+     ],
+     "note": "<code>String::from(&quot;hi&quot;)</code> from Lesson 5 is exactly this: a function belonging to <code>String</code>."
+    }
+   ],
+   "problems": [
+    {
+     "id": "structs-1",
+     "type": "fill",
+     "prompt": "Make it print 4.",
+     "good": "<code>p.y</code> reads the <code>y</code> field, which is 4.",
+     "bad": "Which field holds 4?",
+     "lines": [
+      "struct Point {",
+      "    x: i32,",
+      "    y: i32,",
+      "}",
+      "",
+      "fn main() {",
+      "    let p = Point { x: 3, y: 4 };",
+      "    println!(\"{}\", p.__);",
+      "}"
+     ],
+     "bank": [
+      "y",
+      "x",
+      "0",
+      "Point"
+     ],
+     "answer": [
+      "y"
+     ]
+    },
+    {
+     "id": "structs-2",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>bump</code> takes <code>&amp;mut self</code>, but <code>c</code> isn&#x27;t <code>mut</code>, so it can&#x27;t be lent out for changing.",
+     "bad": "The method is fine. Look at how it&#x27;s called.",
+     "lines": [
+      "struct Counter {",
+      "    n: i32,",
+      "}",
+      "",
+      "impl Counter {",
+      "    fn bump(&mut self) {",
+      "        self.n += 1;",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    let c = Counter { n: 0 };",
+      "    c.bump();",
+      "}"
+     ],
+     "answer": 12,
+     "rustc": "error[E0596]: cannot borrow `c` as mutable, as it is not declared as mutable\n  --> src/main.rs:13:5\n   |\n13 |     c.bump();\n   |     ^ cannot borrow as mutable\n   |\nhelp: consider changing this to be mutable\n   |\n12 |     let mut c = Counter { n: 0 };\n   |         +++"
+    },
+    {
+     "id": "structs-3",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "<code>new</code> has no <code>self</code>, so it&#x27;s called on the type: <code>Rect::new</code>.",
+     "bad": "Functions that belong to a type are reached with two colons.",
+     "lines": [
+      "struct Rect {",
+      "    w: i32,",
+      "    h: i32,",
+      "}",
+      "",
+      "impl Rect {",
+      "    fn new(w: i32, h: i32) -> Self {",
+      "        Rect { w: w, h: h }",
+      "    }",
+      "",
+      "    fn area(&self) -> i32 {",
+      "        self.w * self.h",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    let r = Rect__new(2, 5);",
+      "    println!(\"{}\", r.area());",
+      "}"
+     ],
+     "bank": [
+      "::",
+      ".",
+      "->",
+      ":"
+     ],
+     "answer": [
+      "::"
+     ]
+    },
+    {
+     "id": "structs-4",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "1 + 4 + 5 = 10. Each call changes the same <code>s</code>.",
+     "bad": "Each <code>add</code> call changes <code>s.points</code>. Start at 1.",
+     "lines": [
+      "struct Score {",
+      "    points: i32,",
+      "}",
+      "",
+      "impl Score {",
+      "    fn add(&mut self, n: i32) {",
+      "        self.points += n;",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    let mut s = Score { points: 1 };",
+      "    s.add(4);",
+      "    s.add(5);",
+      "    println!(\"{}\", s.points);",
+      "}"
+     ],
+     "bank": [
+      "1",
+      "5",
+      "9",
+      "10"
+     ],
+     "answer": [
+      "10"
+     ]
+    },
+    {
+     "id": "structs-5",
+     "type": "order",
+     "prompt": "Make it print \"Rex says woof\", then \"Rexy says woof\".",
+     "good": "Make the dog, speak, change the name, speak again.",
+     "bad": "The name changes between the two speeches.",
+     "head": [
+      "struct Dog {",
+      "    name: String,",
+      "}",
+      "",
+      "impl Dog {",
+      "    fn new(name: &str) -> Self {",
+      "        Dog { name: String::from(name) }",
+      "    }",
+      "",
+      "    fn speak(&self) {",
+      "        println!(\"{} says woof\", self.name);",
+      "    }",
+      "}",
+      "",
+      "fn main() {"
+     ],
+     "tail": [
+      "}"
+     ],
+     "pool": [
+      "let mut d = Dog::new(\"Rex\");",
+      "d.speak();",
+      "d.name.push_str(\"y\");",
+      "d.speak();"
+     ],
+     "accept": [
+      [
+       "let mut d = Dog::new(\"Rex\");",
+       "d.speak();",
+       "d.name.push_str(\"y\");",
+       "d.speak();"
+      ]
+     ]
+    },
+    {
+     "id": "structs-6",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "<code>&amp;self</code> only borrows the square, so <code>area</code> can be called again.",
+     "bad": "Plain <code>self</code> takes ownership, so the second call would fail. <code>&amp;mut self</code> needs <code>s</code> to be <code>mut</code>.",
+     "lines": [
+      "struct Square {",
+      "    side: i32,",
+      "}",
+      "",
+      "impl Square {",
+      "    fn area(__) -> i32 {",
+      "        self.side * self.side",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    let s = Square { side: 3 };",
+      "    println!(\"{}\", s.area());",
+      "    println!(\"{}\", s.area());",
+      "}"
+     ],
+     "bank": [
+      "&self",
+      "self",
+      "&mut self",
+      "Self"
+     ],
+     "answer": [
+      "&self"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lists",
+   "n": 9,
+   "title": "Lists",
+   "summary": "<code>Vec</code>: a list that grows, and <code>Vec::new()</code>.",
+   "cards": [
+    {
+     "h": "Vec holds a list",
+     "p": "<code>Vec::new()</code> makes an empty list, using the <code>new</code> idea from Lesson 8. <code>push</code> adds an item to the end, so the list must be <code>mut</code>.",
+     "code": [
+      "let mut v = Vec::new();",
+      "v.push(10);",
+      "v.push(20);",
+      "println!(\"{}\", v.len()); // 2"
+     ],
+     "note": null
+    },
+    {
+     "h": "vec! starts with items",
+     "p": "<code>vec![...]</code> makes a list with items already in it. Get an item by its position in square brackets. Positions start at 0.",
+     "code": [
+      "let nums = vec![4, 8, 15];",
+      "println!(\"{}\", nums[0]); // 4",
+      "println!(\"{}\", nums[2]); // 15"
+     ],
+     "note": "Asking for a position that doesn&#x27;t exist stops the program with an error message."
+    },
+    {
+     "h": "Looping over a Vec",
+     "p": "<code>for n in &amp;nums</code> borrows the list and visits each item. Without the <code>&amp;</code>, the loop takes ownership and the list is gone afterwards.",
+     "code": [
+      "let nums = vec![1, 2, 3];",
+      "for n in &nums {",
+      "    println!(\"{n}\");",
+      "}",
+      "println!(\"{}\", nums.len()); // still usable"
+     ],
+     "note": null
+    },
+    {
+     "h": "Vec<T> names what's inside",
+     "p": "The type of a list of <code>i32</code> is <code>Vec&lt;i32&gt;</code>. The angle brackets say what kind of item it holds.",
+     "code": [
+      "let mut names: Vec<String> = Vec::new();",
+      "names.push(String::from(\"Ana\"));"
+     ],
+     "note": "Every item in a Vec has the same type."
+    }
+   ],
+   "problems": [
+    {
+     "id": "lists-1",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "<code>push</code> changes the list, so <code>v</code> must be <code>mut</code>.",
+     "bad": "What does a variable need so it can change?",
+     "lines": [
+      "let __ v = Vec::new();",
+      "v.push(1);",
+      "v.push(2);",
+      "println!(\"{}\", v.len());"
+     ],
+     "bank": [
+      "mut",
+      "&",
+      "const",
+      "Vec"
+     ],
+     "answer": [
+      "mut"
+     ]
+    },
+    {
+     "id": "lists-2",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "Positions start at 0, so <code>nums[1]</code> is the second item, 8. There are 3 items.",
+     "bad": "Position 0 is the first item.",
+     "lines": [
+      "let nums = vec![4, 8, 15];",
+      "println!(\"{}\", nums[1]);",
+      "println!(\"{}\", nums.len());"
+     ],
+     "bank": [
+      "2",
+      "3",
+      "4",
+      "8",
+      "15"
+     ],
+     "answer": [
+      "8",
+      "3"
+     ]
+    },
+    {
+     "id": "lists-3",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>for n in nums</code> (no <code>&amp;</code>) moved the list into the loop. Writing <code>&amp;nums</code> would borrow it instead.",
+     "bad": "The loop is fine on its own. What happened to <code>nums</code> during it?",
+     "lines": [
+      "fn main() {",
+      "    let nums = vec![1, 2, 3];",
+      "    for n in nums {",
+      "        println!(\"{n}\");",
+      "    }",
+      "    println!(\"{}\", nums.len());",
+      "}"
+     ],
+     "answer": 5,
+     "rustc": "error[E0382]: borrow of moved value: `nums`\n --> src/main.rs:6:20\n  |\n2 |     let nums = vec![1, 2, 3];\n  |         ---- move occurs because `nums` has type `Vec<i32>`, which does not implement the `Copy` trait\n3 |     for n in nums {\n  |              ---- `nums` moved due to this implicit call to `.into_iter()`\n...\n6 |     println!(\"{}\", nums.len());\n  |                    ^^^^ value borrowed here after move\n  |\nnote: `into_iter` takes ownership of the receiver `self`, which moves `nums`\n --> /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/iter/traits/collect.rs:312:17\nhelp: consider iterating over a slice of the `Vec<i32>`'s content to avoid moving into the `for` loop\n  |\n3 |     for n in &nums {\n  |              +"
+    },
+    {
+     "id": "lists-4",
+     "type": "fill",
+     "prompt": "Fill in the item type.",
+     "good": "The list holds <code>String</code> values, so it&#x27;s a <code>Vec&lt;String&gt;</code>.",
+     "bad": "What type does <code>String::from</code> make?",
+     "lines": [
+      "let mut names: Vec<__> = Vec::new();",
+      "names.push(String::from(\"Ana\"));",
+      "println!(\"{}\", names[0]);"
+     ],
+     "bank": [
+      "String",
+      "i32",
+      "Vec",
+      "str"
+     ],
+     "answer": [
+      "String"
+     ]
+    },
+    {
+     "id": "lists-5",
+     "type": "order",
+     "prompt": "Add up the list and print 10.",
+     "good": "Start the total at 0, add each item in the loop, print after the loop ends.",
+     "bad": "The total must exist before the loop, and the print belongs after it.",
+     "head": [
+      "fn main() {",
+      "    let nums = vec![2, 3, 5];"
+     ],
+     "tail": [
+      "}"
+     ],
+     "pool": [
+      "let mut total = 0;",
+      "for n in &nums {",
+      "total += n;",
+      "}",
+      "println!(\"{total}\");"
+     ],
+     "accept": [
+      [
+       "let mut total = 0;",
+       "for n in &nums {",
+       "total += n;",
+       "}",
+       "println!(\"{total}\");"
+      ]
+     ]
+    },
+    {
+     "id": "lists-6",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "The list is [1, 2, 3], length 3. Position 3 − 1 = 2 is the last item: 3.",
+     "bad": "<code>v.len() - 1</code> is the position of the last item.",
+     "lines": [
+      "let mut v = vec![1];",
+      "v.push(2);",
+      "v.push(3);",
+      "println!(\"{}\", v[v.len() - 1]);"
+     ],
+     "bank": [
+      "1",
+      "2",
+      "3",
+      "won't compile"
+     ],
+     "answer": [
+      "3"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "enums",
+   "n": 10,
+   "title": "Enums and match",
+   "summary": "A value that&#x27;s one of several choices, and handling each one.",
+   "cards": [
+    {
+     "h": "enum: one of several choices",
+     "p": "An <code>enum</code> lists every choice a value can be. Pick one with <code>::</code>.",
+     "code": [
+      "enum Light {",
+      "    Red,",
+      "    Yellow,",
+      "    Green,",
+      "}",
+      "",
+      "let l = Light::Green;"
+     ],
+     "note": null
+    },
+    {
+     "h": "match handles each choice",
+     "p": "<code>match</code> compares a value against patterns, top to bottom, and runs the first one that fits. <code>=&gt;</code> separates a pattern from what to do.",
+     "code": [
+      "match l {",
+      "    Light::Red => println!(\"stop\"),",
+      "    Light::Yellow => println!(\"slow\"),",
+      "    Light::Green => println!(\"go\"),",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "match must cover everything",
+     "p": "If any choice is missing, the program won&#x27;t compile. <code>_</code> matches anything that&#x27;s left, which is handy for numbers and text.",
+     "code": [
+      "let n = 3;",
+      "match n {",
+      "    1 => println!(\"one\"),",
+      "    2 => println!(\"two\"),",
+      "    _ => println!(\"lots\"),",
+      "}"
+     ],
+     "note": "Because patterns are tried in order, <code>_</code> goes last."
+    },
+    {
+     "h": "Choices can carry data",
+     "p": "Each choice can hold values. <code>match</code> pulls them out into names you can use. Like <code>if</code>, a <code>match</code> can give back a value.",
+     "code": [
+      "enum Shape {",
+      "    Circle(f64),",
+      "    Square(f64),",
+      "}",
+      "",
+      "fn area(s: Shape) -> f64 {",
+      "    match s {",
+      "        Shape::Circle(r) => 3.14 * r * r,",
+      "        Shape::Square(side) => side * side,",
+      "    }",
+      "}"
+     ],
+     "note": null
+    }
+   ],
+   "problems": [
+    {
+     "id": "enums-1",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "Each <code>match</code> arm is <code>pattern =&gt; value</code>.",
+     "bad": "Look at the other arm for the right arrow.",
+     "lines": [
+      "enum Coin {",
+      "    Penny,",
+      "    Dime,",
+      "}",
+      "",
+      "fn value(c: Coin) -> i32 {",
+      "    match c {",
+      "        Coin::Penny __ 1,",
+      "        Coin::Dime => 10,",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", value(Coin::Dime));",
+      "}"
+     ],
+     "bank": [
+      "=>",
+      "->",
+      "=",
+      ":"
+     ],
+     "answer": [
+      "=>"
+     ]
+    },
+    {
+     "id": "enums-2",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>Dir::Left</code> isn&#x27;t handled, so the <code>match</code> doesn&#x27;t cover every choice.",
+     "bad": "Every arm is fine on its own. Is any choice missing?",
+     "lines": [
+      "enum Dir {",
+      "    Up,",
+      "    Down,",
+      "    Left,",
+      "}",
+      "",
+      "fn main() {",
+      "    let d = Dir::Left;",
+      "    match d {",
+      "        Dir::Up => println!(\"up\"),",
+      "        Dir::Down => println!(\"down\"),",
+      "    }",
+      "}"
+     ],
+     "answer": 8,
+     "rustc": "error[E0004]: non-exhaustive patterns: `Dir::Left` not covered\n  --> src/main.rs:9:11\n   |\n 9 |     match d {\n   |           ^ pattern `Dir::Left` not covered\n   |\nnote: `Dir` defined here\n  --> src/main.rs:1:6\n   |\n 1 | enum Dir {\n   |      ^^^\n...\n 4 |     Left,\n   |     ---- not covered\n   = note: the matched value is of type `Dir`\nhelp: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown\n   |\n11 ~         Dir::Down => println!(\"down\"),\n12 ~         Dir::Left => todo!(),\n   |"
+    },
+    {
+     "id": "enums-3",
+     "type": "order",
+     "prompt": "Make it print \"two\".",
+     "good": "Arms are tried top to bottom and <code>_</code> catches everything, so the <code>2</code> arm has to come before <code>_</code>. Putting <code>_</code> last is the usual habit.",
+     "bad": "Arms are tried top to bottom. What happens if <code>_</code> comes first?",
+     "head": [
+      "fn main() {",
+      "    let n = 2;",
+      "    match n {"
+     ],
+     "tail": [
+      "    }",
+      "}"
+     ],
+     "pool": [
+      "1 => println!(\"one\"),",
+      "2 => println!(\"two\"),",
+      "_ => println!(\"many\"),"
+     ],
+     "accept": [
+      [
+       "1 => println!(\"one\"),",
+       "2 => println!(\"two\"),",
+       "_ => println!(\"many\"),"
+      ],
+      [
+       "2 => println!(\"two\"),",
+       "1 => println!(\"one\"),",
+       "_ => println!(\"many\"),"
+      ],
+      [
+       "2 => println!(\"two\"),",
+       "_ => println!(\"many\"),",
+       "1 => println!(\"one\"),"
+      ]
+     ]
+    },
+    {
+     "id": "enums-4",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "A 2 × 3 rectangle is 6; a square with side 4 is 16.",
+     "bad": "Each shape uses its own arm. A square multiplies its side by itself.",
+     "lines": [
+      "enum Shape {",
+      "    Square(i32),",
+      "    Rect(i32, i32),",
+      "}",
+      "",
+      "fn area(s: Shape) -> i32 {",
+      "    match s {",
+      "        Shape::Square(side) => side * side,",
+      "        Shape::Rect(w, h) => w * h,",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", area(Shape::Rect(2, 3)));",
+      "    println!(\"{}\", area(Shape::Square(4)));",
+      "}"
+     ],
+     "bank": [
+      "5",
+      "6",
+      "8",
+      "16"
+     ],
+     "answer": [
+      "6",
+      "16"
+     ]
+    },
+    {
+     "id": "enums-5",
+     "type": "fill",
+     "prompt": "Make it compile and print \"Saturday\".",
+     "good": "<code>_</code> covers every other number, so the <code>match</code> is complete.",
+     "bad": "A number has far too many values to list. Which pattern matches anything?",
+     "lines": [
+      "let day = 6;",
+      "let kind = match day {",
+      "    6 => \"Saturday\",",
+      "    7 => \"Sunday\",",
+      "    __ => \"weekday\",",
+      "};",
+      "println!(\"{kind}\");"
+     ],
+     "bank": [
+      "_",
+      "else",
+      "*",
+      "0"
+     ],
+     "answer": [
+      "_"
+     ]
+    },
+    {
+     "id": "enums-6",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "<code>l</code> is <code>Red</code>, so the <code>match</code> gives <code>&quot;stop&quot;</code>.",
+     "bad": "The match gives back the value from the arm that fits.",
+     "lines": [
+      "enum Light {",
+      "    Red,",
+      "    Green,",
+      "}",
+      "",
+      "fn main() {",
+      "    let l = Light::Red;",
+      "    let action = match l {",
+      "        Light::Red => \"stop\",",
+      "        Light::Green => \"go\",",
+      "    };",
+      "    println!(\"{action}\");",
+      "}"
+     ],
+     "bank": [
+      "stop",
+      "go",
+      "Red",
+      "won't compile"
+     ],
+     "answer": [
+      "stop"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "errors",
+   "n": 11,
+   "title": "Missing values and errors",
+   "summary": "<code>Option</code>, <code>Result</code> and the <code>?</code> operator.",
+   "cards": [
+    {
+     "h": "Option: maybe a value",
+     "p": "Rust has no null. A value that might be missing is an <code>Option</code>: either <code>Some(value)</code> or <code>None</code>. Asking a Vec for a position with <code>.get</code> gives one.",
+     "code": [
+      "let nums = vec![10, 20];",
+      "let a = nums.get(1);  // Some(20)",
+      "let b = nums.get(5);  // None, no crash"
+     ],
+     "note": null
+    },
+    {
+     "h": "Open an Option with match",
+     "p": "To use the value, <code>match</code> on both cases. The compiler won&#x27;t let you forget <code>None</code>.",
+     "code": [
+      "match nums.get(5) {",
+      "    Some(n) => println!(\"found {n}\"),",
+      "    None => println!(\"nothing there\"),",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "Result: worked or failed",
+     "p": "A <code>Result</code> is either <code>Ok(value)</code> or <code>Err(problem)</code>. Functions that can fail return one. <code>Result&lt;i32, String&gt;</code> means success gives an <code>i32</code> and failure gives a <code>String</code>.",
+     "code": [
+      "fn divide(a: i32, b: i32) -> Result<i32, String> {",
+      "    if b == 0 {",
+      "        Err(String::from(\"divide by zero\"))",
+      "    } else {",
+      "        Ok(a / b)",
+      "    }",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "? passes the error along",
+     "p": "Inside a function that returns <code>Result</code>, writing <code>?</code> after a call gives you the value if it&#x27;s <code>Ok</code>, or returns the <code>Err</code> straight away.",
+     "code": [
+      "fn half_of_div(a: i32, b: i32) -> Result<i32, String> {",
+      "    let d = divide(a, b)?;  // stops here on Err",
+      "    Ok(d / 2)",
+      "}"
+     ],
+     "note": "<code>.unwrap()</code> also takes the value out, but crashes the program on <code>None</code> or <code>Err</code>. It&#x27;s fine for quick experiments."
+    }
+   ],
+   "problems": [
+    {
+     "id": "errors-1",
+     "type": "fill",
+     "prompt": "Make it print 4.",
+     "good": "The function returns an <code>Option</code>, so a found value is <code>Some(n)</code>.",
+     "bad": "The other branch gives <code>None</code>. What&#x27;s its partner?",
+     "lines": [
+      "fn even(n: i32) -> Option<i32> {",
+      "    if n % 2 == 0 {",
+      "        __(n)",
+      "    } else {",
+      "        None",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    match even(4) {",
+      "        Some(x) => println!(\"{x}\"),",
+      "        None => println!(\"none\"),",
+      "    }",
+      "}"
+     ],
+     "bank": [
+      "Some",
+      "Ok",
+      "Option",
+      "return"
+     ],
+     "answer": [
+      "Some"
+     ]
+    },
+    {
+     "id": "errors-2",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "There&#x27;s no position 5, so <code>.get(5)</code> is <code>None</code>. No crash.",
+     "bad": "The list only has positions 0 and 1.",
+     "lines": [
+      "let nums = vec![10, 20];",
+      "match nums.get(5) {",
+      "    Some(n) => println!(\"{n}\"),",
+      "    None => println!(\"nothing\"),",
+      "}"
+     ],
+     "bank": [
+      "10",
+      "20",
+      "nothing",
+      "won't compile"
+     ],
+     "answer": [
+      "nothing"
+     ]
+    },
+    {
+     "id": "errors-3",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>first</code> is an <code>Option</code>, not a number. You have to open it with <code>match</code> (or similar) before doing maths.",
+     "bad": "What type does <code>.get</code> give back?",
+     "lines": [
+      "fn main() {",
+      "    let nums = vec![1, 2, 3];",
+      "    let first = nums.get(0);",
+      "    let doubled = first * 2;",
+      "    println!(\"{doubled}\");",
+      "}"
+     ],
+     "answer": 3,
+     "rustc": "error[E0369]: cannot multiply `Option<&{integer}>` by `{integer}`\n --> src/main.rs:4:25\n  |\n4 |     let doubled = first * 2;\n  |                   ----- ^ - {integer}\n  |                   |\n  |                   Option<&{integer}>\n  |\nnote: `Option<&{integer}>` does not implement `Mul<{integer}>`\n --> /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/option.rs:597:0\n  |\n  = note: `Option<&{integer}>` is defined in another crate"
+    },
+    {
+     "id": "errors-4",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "<code>half(n)?</code> gives the number inside <code>Ok</code>, or returns the <code>Err</code> from <code>quarter</code> early.",
+     "bad": "<code>half(h)</code> needs a plain number. Which symbol takes it out of the <code>Result</code>?",
+     "lines": [
+      "fn half(n: i32) -> Result<i32, String> {",
+      "    if n % 2 == 0 {",
+      "        Ok(n / 2)",
+      "    } else {",
+      "        Err(String::from(\"odd\"))",
+      "    }",
+      "}",
+      "",
+      "fn quarter(n: i32) -> Result<i32, String> {",
+      "    let h = half(n)__;",
+      "    half(h)",
+      "}",
+      "",
+      "fn main() {",
+      "    match quarter(8) {",
+      "        Ok(v) => println!(\"{v}\"),",
+      "        Err(e) => println!(\"error: {e}\"),",
+      "    }",
+      "}"
+     ],
+     "bank": [
+      "?",
+      "!",
+      ".clone()"
+     ],
+     "answer": [
+      "?"
+     ]
+    },
+    {
+     "id": "errors-5",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "half(6) is 3, but half(3) fails because 3 is odd, so <code>quarter</code> gives the <code>Err</code>.",
+     "bad": "Work it through: half of 6, then half of that.",
+     "lines": [
+      "fn half(n: i32) -> Result<i32, String> {",
+      "    if n % 2 == 0 {",
+      "        Ok(n / 2)",
+      "    } else {",
+      "        Err(String::from(\"odd\"))",
+      "    }",
+      "}",
+      "",
+      "fn quarter(n: i32) -> Result<i32, String> {",
+      "    let h = half(n)?;",
+      "    half(h)",
+      "}",
+      "",
+      "fn main() {",
+      "    match quarter(6) {",
+      "        Ok(v) => println!(\"{v}\"),",
+      "        Err(e) => println!(\"error: {e}\"),",
+      "    }",
+      "}"
+     ],
+     "bank": [
+      "1",
+      "3",
+      "error: odd",
+      "won't compile"
+     ],
+     "answer": [
+      "error: odd"
+     ]
+    },
+    {
+     "id": "errors-6",
+     "type": "order",
+     "prompt": "Make it print \"negative\", then 30.",
+     "good": "Check first and leave early with <code>return Err</code>. The final <code>Ok(age)</code> is the value when all is well.",
+     "bad": "The last line of the function is its value, so the happy path goes at the end.",
+     "head": [
+      "fn check(age: i32) -> Result<i32, String> {"
+     ],
+     "tail": [
+      "}",
+      "",
+      "fn main() {",
+      "    for age in vec![-1, 30] {",
+      "        match check(age) {",
+      "            Ok(a) => println!(\"{a}\"),",
+      "            Err(e) => println!(\"{e}\"),",
+      "        }",
+      "    }",
+      "}"
+     ],
+     "pool": [
+      "if age < 0 {",
+      "return Err(String::from(\"negative\"));",
+      "}",
+      "Ok(age)"
+     ],
+     "accept": [
+      [
+       "if age < 0 {",
+       "return Err(String::from(\"negative\"));",
+       "}",
+       "Ok(age)"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "traits",
+   "n": 12,
+   "title": "Traits and iterators",
+   "summary": "Shared behaviour, tiny inline functions, and chains.",
+   "cards": [
+    {
+     "h": "Traits: a promise of methods",
+     "p": "A <code>trait</code> lists methods a type promises to have. It only names them; each type writes its own version.",
+     "code": [
+      "trait Speak {",
+      "    fn speak(&self) -> String;",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "impl Trait for Type",
+     "p": "<code>impl Speak for Dog</code> keeps the promise for <code>Dog</code>. Every method in the trait must be written.",
+     "code": [
+      "struct Dog {",
+      "    name: String,",
+      "}",
+      "",
+      "impl Speak for Dog {",
+      "    fn speak(&self) -> String {",
+      "        String::from(\"woof\")",
+      "    }",
+      "}"
+     ],
+     "note": null
+    },
+    {
+     "h": "Closures: small inline functions",
+     "p": "A closure is a function without a name. Its parameters go between pipes. You can store it in a variable and call it.",
+     "code": [
+      "let double = |x| x * 2;",
+      "println!(\"{}\", double(4)); // 8"
+     ],
+     "note": null
+    },
+    {
+     "h": "Iterators chain steps",
+     "p": "<code>.iter()</code> goes through a list item by item. Chain steps onto it: <code>map</code> changes each item using a closure, <code>sum</code> adds them up, <code>max</code> finds the biggest.",
+     "code": [
+      "let nums = vec![1, 2, 3];",
+      "let total: i32 = nums.iter().map(|n| n * 2).sum();",
+      "println!(\"{total}\"); // 12"
+     ],
+     "note": "<code>max</code> gives an <code>Option</code>, because an empty list has no biggest item."
+    }
+   ],
+   "problems": [
+    {
+     "id": "traits-1",
+     "type": "fill",
+     "prompt": "Make this compile.",
+     "good": "It reads as a sentence: implement <code>Greet</code> for <code>Cat</code>.",
+     "bad": "Say it out loud: implement Greet ___ Cat.",
+     "lines": [
+      "trait Greet {",
+      "    fn hello(&self) -> String;",
+      "}",
+      "",
+      "struct Cat {",
+      "    name: String,",
+      "}",
+      "",
+      "impl Greet __ Cat {",
+      "    fn hello(&self) -> String {",
+      "        self.name.clone()",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    let c = Cat { name: String::from(\"Tom\") };",
+      "    println!(\"{}\", c.hello());",
+      "}"
+     ],
+     "bank": [
+      "for",
+      "to",
+      "in",
+      ":"
+     ],
+     "answer": [
+      "for"
+     ]
+    },
+    {
+     "id": "traits-2",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "The trait promises <code>sides</code> too, but this <code>impl</code> only writes <code>area</code>.",
+     "bad": "Compare what the trait asks for with what the <code>impl</code> provides.",
+     "lines": [
+      "trait Shape {",
+      "    fn area(&self) -> i32;",
+      "    fn sides(&self) -> i32;",
+      "}",
+      "",
+      "struct Square {",
+      "    side: i32,",
+      "}",
+      "",
+      "impl Shape for Square {",
+      "    fn area(&self) -> i32 {",
+      "        self.side * self.side",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    let s = Square { side: 2 };",
+      "    println!(\"{}\", s.area());",
+      "}"
+     ],
+     "answer": 9,
+     "rustc": "error[E0046]: not all trait items implemented, missing: `sides`\n  --> src/main.rs:10:1\n   |\n 3 |     fn sides(&self) -> i32;\n   |     ----------------------- `sides` from trait\n...\n10 | impl Shape for Square {\n   | ^^^^^^^^^^^^^^^^^^^^^ missing `sides` in implementation"
+    },
+    {
+     "id": "traits-3",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "<code>x</code> is 5, and <code>add(5, 5)</code> is 10.",
+     "bad": "Work out <code>x</code> first, then add it to itself.",
+     "lines": [
+      "let add = |a, b| a + b;",
+      "let x = add(2, 3);",
+      "println!(\"{}\", add(x, x));"
+     ],
+     "bank": [
+      "5",
+      "6",
+      "10",
+      "25"
+     ],
+     "answer": [
+      "10"
+     ]
+    },
+    {
+     "id": "traits-4",
+     "type": "output",
+     "prompt": "What does this print?",
+     "good": "Each item becomes 10, 20, 30, and the sum is 60.",
+     "bad": "<code>map</code> changes every item before <code>sum</code> adds them.",
+     "lines": [
+      "let nums = vec![1, 2, 3];",
+      "let total: i32 = nums.iter().map(|n| n * 10).sum();",
+      "println!(\"{total}\");"
+     ],
+     "bank": [
+      "6",
+      "60",
+      "123",
+      "won't compile"
+     ],
+     "answer": [
+      "60"
+     ]
+    },
+    {
+     "id": "traits-5",
+     "type": "fill",
+     "prompt": "Make it print the largest number.",
+     "good": "<code>max</code> gives <code>Some</code> of the biggest item: 9.",
+     "bad": "Which step finds the biggest item and returns an <code>Option</code>?",
+     "lines": [
+      "let nums = vec![4, 9, 2];",
+      "match nums.iter().__() {",
+      "    Some(n) => println!(\"{n}\"),",
+      "    None => println!(\"empty\"),",
+      "}"
+     ],
+     "bank": [
+      "max",
+      "sum",
+      "len",
+      "map"
+     ],
+     "answer": [
+      "max"
+     ]
+    },
+    {
+     "id": "traits-6",
+     "type": "order",
+     "prompt": "Make it print 12.",
+     "good": "The <code>impl</code> block wraps the method, and the method wraps its body.",
+     "bad": "Each <code>{</code> needs its matching <code>}</code> in the right place.",
+     "head": [
+      "trait Area {",
+      "    fn area(&self) -> i32;",
+      "}",
+      "",
+      "struct Rect {",
+      "    w: i32,",
+      "    h: i32,",
+      "}",
+      ""
+     ],
+     "tail": [
+      "",
+      "fn main() {",
+      "    let r = Rect { w: 3, h: 4 };",
+      "    println!(\"{}\", r.area());",
+      "}"
+     ],
+     "pool": [
+      "impl Area for Rect {",
+      "fn area(&self) -> i32 {",
+      "self.w * self.h",
+      "}",
+      "}"
+     ],
+     "accept": [
+      [
+       "impl Area for Rect {",
+       "fn area(&self) -> i32 {",
+       "self.w * self.h",
+       "}",
+       "}"
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}
