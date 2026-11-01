@@ -262,6 +262,15 @@
       Sfx.play(s.ok ? "right" : "wrong", null, 140);
     }
 
+    // Touch-down sounds play the instant a finger lands, together with the CSS squish. ("click" only
+    // fires when the finger lifts, which is too late to feel connected to the press.)
+    body.addEventListener("pointerdown", e => {
+      const t = e.target.closest("button");
+      const s = st[cur];
+      if (!t || t.disabled || !s || (s.done && s.ok)) return;
+      if (t.dataset.chip !== undefined || t.dataset.pool !== undefined) Sfx.play("tap");
+      else if (t.dataset.line !== undefined) Sfx.play("select");
+    });
     body.addEventListener("click", e => {
       const step = steps[cur]; if (step.type !== "problem") return;
       const s = st[cur], t = e.target.closest("button");
@@ -272,10 +281,10 @@
         if (k < 0) k = s.fill.length - 1;   // all gaps full: the tap replaces the last answer
         s.fill[k] = t.dataset.chip; just = "s" + k;
         tapped = "c" + t.dataset.chip;
-        Sfx.play("tap"); Sfx.play("place", null, 70);   // squish, then the pop as it lands
+        Sfx.play("place");   // the squish already played on touch-down; this is the pop as it lands
       } else if (t.dataset.slot !== undefined) { if (s.fill[+t.dataset.slot]) Sfx.play("remove"); s.fill[+t.dataset.slot] = null; }
-      else if (t.dataset.line !== undefined) { s.pick = +t.dataset.line; Sfx.play("select"); }
-      else if (t.dataset.pool !== undefined) { s.seq.push(s.pool.splice(+t.dataset.pool, 1)[0]); just = "q" + (s.seq.length - 1); Sfx.play("tap"); Sfx.play("place", null, 70); }
+      else if (t.dataset.line !== undefined) s.pick = +t.dataset.line;
+      else if (t.dataset.pool !== undefined) { s.seq.push(s.pool.splice(+t.dataset.pool, 1)[0]); just = "q" + (s.seq.length - 1); Sfx.play("place"); }
       else if (t.dataset.seq !== undefined) { s.pool.push(s.seq.splice(+t.dataset.seq, 1)[0]); Sfx.play("remove"); }
       else return;
       render();

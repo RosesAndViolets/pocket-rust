@@ -24,7 +24,7 @@ body { margin: 0; background: var(--pink); color: var(--ink); font: 15px/1.55 va
   radial-gradient(circle at 12% 8%, var(--pink-hi) 0 70px, transparent 71px),
   radial-gradient(circle at 95% 38%, var(--pink-lo) 0 110px, transparent 111px),
   radial-gradient(circle at 6% 92%, var(--pink-hi) 0 130px, transparent 131px); }
-button { font: inherit; color: inherit; }
+button { font: inherit; color: inherit; touch-action: manipulation; }
 button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
 code { font: 700 .82em var(--mono); background: var(--paper); border: 2px solid var(--ink); border-radius: 6px; padding: 0 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 [hidden] { display: none !important; }
