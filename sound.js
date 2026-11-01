@@ -12,10 +12,15 @@ window.Sfx = (() => {
   try { const saved = JSON.parse(localStorage.getItem(KEY)) || {}; s.on = saved.on ?? s.on; s.volume = saved.volume ?? s.volume; } catch { /* storage blocked */ }
 
   let ctx = null, master = null, noiseBuf = null;
-  // iOS breaks the audio engine when the phone locks or the app goes to the background: it can report
-  // "running" afterwards and still play nothing. So after any trip to the background the engine is
-  // marked stale, and the next tap builds a fresh one.
-  let stale = false;
+  // iOS rules this code works around:
+  //  - Sound can only start inside a tap, and older iOS only accepts the moment the finger lifts
+  //    ("touchend"/"click"), not the moment it lands. So every part of a tap tries to wake the engine.
+  //  - After the phone locks or another app takes over, the engine can report "running" and still
+  //    play nothing. So whenever the app comes back, it gets a brand-new engine, ready for the next tap.
+  //  - A sound asked for while the engine is still starting is held briefly and played once it's
+  //    running, instead of being lost. Anything older than HOLD_MS is dropped so pops never pile up late.
+  const HOLD_MS = 250;
+  let needsNew = false, pending = [];
 
   // ───────── audio session ─────────
   let sessionSet = false;
@@ -23,31 +28,47 @@ window.Sfx = (() => {
     if (sessionSet || !navigator.audioSession) return;
     try { navigator.audioSession.type = "ambient"; sessionSet = true; } catch { /* not allowed */ }
   }
-  // Audio may only start from a tap, so every tap makes sure it's awake.
-  function unlock() {
-    if (!s.on) return;
+
+  // ───────── engine ─────────
+  function build() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (ctx) { try { ctx.close(); } catch { /* already gone */ } }
     applySession();
-    if (ctx && (stale || ctx.state === "interrupted" || ctx.state === "closed")) {
-      try { ctx.close(); } catch { /* already gone */ }
-      ctx = null; master = null; noiseBuf = null;
-    }
-    stale = false;
-    if (!ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      ctx = new AC();
-      master = ctx.createGain(); master.gain.value = s.volume; master.connect(ctx.destination);
-      ctx.addEventListener("statechange", () => { if (ctx && ctx.state === "interrupted") stale = true; });
-    }
-    if (ctx.state !== "running") ctx.resume().catch(() => {});
+    const c = new AC({ latencyHint: "interactive" });
+    ctx = c; needsNew = false; noiseBuf = null; pending = [];
+    master = c.createGain(); master.gain.value = s.volume; master.connect(c.destination);
+    c.addEventListener("statechange", () => {
+      if (c !== ctx) return;
+      if (c.state === "running") flush();
+      else if (c.state === "interrupted") needsNew = true;
+    });
   }
-  document.addEventListener("pointerdown", unlock, true);
-  document.addEventListener("keydown", unlock, true);
+  // Called from every part of a tap: start (or restart) the engine while iOS allows it.
+  function wake() {
+    if (!s.on) return;
+    if (!ctx || needsNew || ctx.state === "closed") build();
+    if (!ctx || ctx.state === "running") return;
+    ctx.resume().then(flush, () => {});
+    try {   // a silent one-sample sound inside the tap is what finally lets iOS audio start
+      const src = ctx.createBufferSource(); src.buffer = ctx.createBuffer(1, 1, 22050); src.connect(ctx.destination); src.start(0);
+    } catch { /* not ready yet */ }
+  }
+  function flush() {
+    if (!ctx || ctx.state !== "running") return;
+    const now = performance.now(), due = pending.filter(p => now - p.at < HOLD_MS);
+    pending = [];
+    due.forEach(p => p.run());
+  }
+  for (const ev of ["pointerdown", "touchstart", "touchend", "mousedown", "click", "keydown"]) {
+    document.addEventListener(ev, wake, { capture: true, passive: true });
+  }
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") stale = true;
+    if (document.visibilityState === "hidden") needsNew = true;
+    else if (s.on) build();          // back in the app: a fresh engine, waiting for the first tap
   });
-  window.addEventListener("pagehide", () => { stale = true; });
-  window.addEventListener("pageshow", e => { if (e.persisted) stale = true; });
+  window.addEventListener("pageshow", e => { if (e.persisted && s.on) build(); });
+  if (s.on) build();                 // ready (but paused, as iOS requires) before the first tap
 
   // ───────── voices ─────────
   const jit = (f, amt = 0.035) => f * (1 + (Math.random() - 0.5) * amt);
@@ -97,10 +118,15 @@ window.Sfx = (() => {
   };
 
   function play(name, arg, delay = 0) {
-    if (!s.on || !ctx || stale || ctx.state !== "running") return;
+    if (!s.on) return;
     const fn = KIT[name]; if (!fn) return;
-    const go = () => { try { fn(arg); } catch { /* a dropped sound is fine */ } };
-    if (delay) setTimeout(go, delay); else go();
+    const fire = () => {
+      if (!ctx || needsNew) return;
+      const run = () => { try { fn(arg); } catch { /* a dropped sound is fine */ } };
+      if (ctx.state === "running") run();
+      else pending.push({ run, at: performance.now() });   // engine still starting: play it as soon as it is
+    };
+    if (delay) setTimeout(fire, delay); else fire();
   }
   // Headline words: one rising note per word, in step with the word animation (70 ms apart).
   function words(n, start = 120) { for (let i = 0; i < Math.min(n, 9); i++) play("word", i, start + i * 70); }
@@ -109,7 +135,7 @@ window.Sfx = (() => {
     Object.assign(s, patch);
     try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* storage blocked */ }
     if (master) master.gain.value = s.volume;
-    if (s.on) unlock();
+    if (s.on) wake();
   }
 
   return { play, words, set, get settings() { return { ...s }; } };
