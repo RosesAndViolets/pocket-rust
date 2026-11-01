@@ -1247,6 +1247,359 @@ match nums.iter().__() {
     ],
 })
 
+# ─────────────────────────────── 13 ───────────────────────────────
+COURSE.append({
+    "id": "generics", "title": "Generics and lifetimes",
+    "summary": "One function for many types, and how long a borrow lasts.",
+    "cards": [
+        card("One function, many types",
+             "A name in angle brackets after the function name, usually `T`, stands for \"any type\". The caller decides what `T` is.",
+             '''
+fn pick<T>(first: T, second: T, take_first: bool) -> T {
+    if take_first { first } else { second }
+}
+
+fn main() {
+    println!("{}", pick(1, 2, true));       // 1
+    println!("{}", pick("a", "b", false));  // b
+}''',
+             "This is called a generic. `Vec<T>` from Lesson 9 works the same way."),
+        card("Generic structs",
+             "Structs can be generic too. `T` is filled in when you make one.",
+             '''
+struct Pair<T> {
+    a: T,
+    b: T,
+}
+
+let nums = Pair { a: 1, b: 2 };       // Pair<i32>
+let words = Pair { a: "x", b: "y" };  // Pair<&str>''',
+             "Methods on a generic struct start with `impl<T> Pair<T>`."),
+        card("Bounds: what T must be able to do",
+             "Inside a generic function, Rust only lets you do what every possible `T` can do. A bound like `T: PartialOrd` says \"only types that can be compared with < and >\".",
+             '''
+fn largest<T: PartialOrd>(a: T, b: T) -> T {
+    if a > b { a } else { b }
+}''',
+             "Bounds are traits from Lesson 12. Others you'll see: `Clone`, `Copy`, `Display` (can be printed with `{}`)."),
+        card("Lifetimes: how long a borrow lasts",
+             "When a function takes two borrows and returns one of them, Rust needs to know the result can't outlive the inputs. A lifetime name like `'a` says so.",
+             '''
+fn longer<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() { x } else { y }
+}''',
+             "Read `'a` as \"lives at least as long as\". Most of the time Rust works lifetimes out itself; you only write them when it asks."),
+    ],
+    "problems": [
+        fill("Make this generic function compile.", '''
+fn pick<__>(first: T, second: T, take_first: bool) -> T {
+    if take_first { first } else { second }
+}
+
+fn main() {
+    println!("{}", pick(3, 7, false));
+    println!("{}", pick("x", "y", true));
+}''', ["T", "i32", "'a", "_"], ["T"],
+             "`<T>` introduces the name `T`, which the parameters then use.",
+             "The parameters use a type called `T`. Where does that name come from?", output=["7", "x"], wrap=False),
+        err("Which line does the compiler reject?", '''
+fn largest<T>(a: T, b: T) -> T {
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
+
+fn main() {
+    println!("{}", largest(3, 9));
+}''', 2, "E0369",
+            "Not every type can be compared with `>`, so a plain `T` isn't allowed to. It needs a bound.",
+            "The signature is fine on its own. Which line does something not every type can do?"),
+        fill("Add the bound that makes `>` work.", '''
+fn largest<T: __>(a: T, b: T) -> T {
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
+
+fn main() {
+    println!("{}", largest(3, 9));
+}''', ["PartialOrd", "Display", "Clone", "Copy"], ["PartialOrd"],
+             "`PartialOrd` is the trait for `<` and `>`.",
+             "Which trait is about comparing with greater and less than?", output=["9"], wrap=False),
+        err("Which line does the compiler reject?", '''
+fn longer(x: &str, y: &str) -> &str {
+    if x.len() > y.len() { x } else { y }
+}
+
+fn main() {
+    println!("{}", longer("hi", "hello"));
+}''', 1, "E0106",
+            "The result is a borrow of either `x` or `y`, and Rust can't tell which. It asks for a lifetime.",
+            "The body is fine. Rust needs more information in the signature."),
+        fill("Finish the lifetime.", '''
+fn longer<'a>(x: &'a str, y: &'a str) -> &__ str {
+    if x.len() > y.len() { x } else { y }
+}
+
+fn main() {
+    println!("{}", longer("hi", "hello"));
+}''', ["'a", "a", "T", "mut"], ["'a"],
+             "The result lives as long as `'a`, the same as both inputs.",
+             "The return type needs the same lifetime name as the inputs.", output=["hello"], wrap=False),
+        out("What does this print?", '''
+struct Pair<T> {
+    a: T,
+    b: T,
+}
+
+impl<T> Pair<T> {
+    fn swap(self) -> Pair<T> {
+        Pair { a: self.b, b: self.a }
+    }
+}
+
+fn main() {
+    let p = Pair { a: 1, b: 2 }.swap();
+    println!("{} {}", p.a, p.b);
+}''', ["1 2", "2 1", "2 2", WONT], ["2 1"],
+            "`swap` builds a new `Pair` with the fields the other way round.",
+            "Look at which field goes where in `swap`.", wrap=False),
+    ],
+})
+
+# ─────────────────────────────── 14 ───────────────────────────────
+COURSE.append({
+    "id": "modules", "title": "Modules, use and derive",
+    "summary": "The lines at the top of every real Rust file.",
+    "cards": [
+        card("use brings names in",
+             "Rust's standard library is organised into modules, and `::` walks through them. `use` brings a name in so you can write it short.",
+             '''
+use std::cmp::max;
+
+fn main() {
+    println!("{}", max(3, 8));            // 8
+    println!("{}", std::cmp::min(3, 8));  // 3, full path, no use
+}''',
+             "`std` is the standard library. Real files usually start with a few `use` lines."),
+        card("mod groups your own code",
+             "`mod` makes a module. Everything inside is private unless marked `pub`, so you choose what the rest of the program can reach.",
+             '''
+mod shapes {
+    pub fn area(w: i32, h: i32) -> i32 {
+        w * h
+    }
+}
+
+fn main() {
+    println!("{}", shapes::area(2, 3)); // 6
+}''',
+             "In bigger projects each module usually lives in its own file."),
+        card("#[derive] writes code for you",
+             "`#[derive(Debug)]` above a struct adds the ability to print it with `{:?}`, which shows every field.",
+             '''
+#[derive(Debug)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+// println!("{:?}", Point { x: 1, y: 2 });
+// prints: Point { x: 1, y: 2 }'''),
+        card("The usual derives",
+             "`Clone` adds `.clone()`. `PartialEq` adds `==`. `Debug` adds `{:?}`. You'll often see several at once.",
+             '''
+#[derive(Debug, Clone, PartialEq)]
+struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+}''',
+             "`u8` is a small whole number from 0 to 255, handy for colours."),
+    ],
+    "problems": [
+        fill("Make it print 9.", '''
+use std::cmp::__;
+
+fn main() {
+    println!("{}", max(4, 9));
+}''', ["max", "min", "Max", "cmp"], ["max"],
+             "`use std::cmp::max;` brings in exactly the name the code calls.",
+             "The code calls `max`. Which name has to be brought in?", output=["9"], wrap=False),
+        err("Which line does the compiler reject?", '''
+mod bank {
+    fn balance() -> i32 {
+        100
+    }
+}
+
+fn main() {
+    println!("{}", bank::balance());
+}''', 8, "E0603",
+            "`balance` isn't `pub`, so code outside `bank` can't call it.",
+            "The function is fine inside its module. Who's allowed to call it?"),
+        out("What does this print?", '''
+#[derive(Debug)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    println!("{:?}", p);
+}''', ["Point { x: 1, y: 2 }", "(1, 2)", "1 2", WONT], ["Point { x: 1, y: 2 }"],
+            "`{:?}` with `Debug` prints the type name and every field.",
+            "Debug printing shows the struct the way you'd write it.", wrap=False),
+        err("Which line does the compiler reject?", '''
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    println!("{:?}", p);
+}''', 8, "E0277",
+            "`Point` has no `#[derive(Debug)]`, so `{:?}` doesn't know how to print it.",
+            "Compare with the last problem. What's missing above the struct?"),
+        fill("Make it print true.", '''
+#[derive(__)]
+struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+}
+
+fn main() {
+    let a = Color { r: 1, g: 2, b: 3 };
+    let b = Color { r: 1, g: 2, b: 3 };
+    println!("{}", a == b);
+}''', ["PartialEq", "Debug", "Clone", "Eq"], ["PartialEq"],
+             "`PartialEq` adds `==`, comparing every field.",
+             "Which derive adds `==`?", output=["true"], wrap=False),
+        order("Make it print \"hello\".", [],
+              ["mod greet {", "    pub fn hello() {", '        println!("hello");', "    }", "}"],
+              ["", "fn main() {", "    greet::hello();", "}"], ["hello"],
+              "The module wraps the function, and the function wraps the print.",
+              "Each `{` needs its matching `}`, and code that runs must be inside a function."),
+    ],
+})
+
+# ─────────────────────────────── 15 ───────────────────────────────
+COURSE.append({
+    "id": "hashmaps", "title": "Maps",
+    "summary": "`HashMap`: look values up by a key.",
+    "cards": [
+        card("HashMap: look things up by key",
+             "A `HashMap` stores pairs: a key and its value. `insert` adds a pair; inserting the same key again replaces its value.",
+             '''
+use std::collections::HashMap;
+
+fn main() {
+    let mut ages = HashMap::new();
+    ages.insert("Ana", 31);
+    ages.insert("Bo", 27);
+    println!("{}", ages.len()); // 2
+}'''),
+        card("Getting a value gives an Option",
+             "The key might not be there, so `get` returns an `Option`, just like `.get` on a Vec in Lesson 11.",
+             '''
+match ages.get("Ana") {
+    Some(age) => println!("{age}"),
+    None => println!("not found"),
+}'''),
+        card("Counting with entry",
+             "`entry(key).or_insert(0)` finds the value for a key, adding 0 first if it's missing. It gives back a `&mut` to the value; the `*` in front means \"the value itself\", so `+= 1` changes it.",
+             '''
+let mut counts = HashMap::new();
+for w in vec!["a", "b", "a"] {
+    *counts.entry(w).or_insert(0) += 1;
+}
+// counts: "a" -> 2, "b" -> 1''',
+             "This is the standard way to count things in Rust."),
+        card("Looping over a HashMap",
+             "`for (key, value) in &map` visits every pair. The two names in brackets unpack each pair.",
+             '''
+for (name, age) in &ages {
+    println!("{name} is {age}");
+}''',
+             "The order is not the order you inserted them, and can change between runs. Don't rely on it."),
+    ],
+    "problems": [
+        fill("Make it print 1.", '''
+use std::collections::HashMap;
+
+fn main() {
+    let mut scores = HashMap::new();
+    scores.__("red", 3);
+    println!("{}", scores.len());
+}''', ["insert", "push", "add", "get"], ["insert"],
+             "`insert` adds a key and its value.",
+             "`push` is for a Vec. Which method adds a pair to a map?", output=["1"], wrap=False),
+        out("What does this print?", '''
+use std::collections::HashMap;
+
+fn main() {
+    let mut stock = HashMap::new();
+    stock.insert("apple", 5);
+    match stock.get("pear") {
+        Some(n) => println!("{n}"),
+        None => println!("none left"),
+    }
+}''', ["5", "0", "none left", WONT], ["none left"],
+            "There's no \"pear\" key, so `get` gives `None`.",
+            "Which key was inserted, and which one is asked for?", wrap=False),
+        out("What does this print?", '''
+use std::collections::HashMap;
+
+fn main() {
+    let mut m = HashMap::new();
+    m.insert("a", 1);
+    m.insert("a", 2);
+    println!("{}", m.len());
+    match m.get("a") {
+        Some(v) => println!("{v}"),
+        None => println!("none"),
+    }
+}''', ["1", "2"], ["1", "2"],
+            "Inserting the same key again replaces the value, so there's still 1 pair, now holding 2.",
+            "A key can only appear once in a map.", wrap=False),
+        err("Which line does the compiler reject?", '''
+fn main() {
+    let mut m = HashMap::new();
+    m.insert("k", 1);
+}''', 2, "E0433",
+            "`HashMap` isn't brought in automatically. It needs `use std::collections::HashMap;` at the top.",
+            "Which name has Rust never been told about?"),
+        order("Count the words and print how many \"a\"s there are: 2.",
+              ["use std::collections::HashMap;", "", "fn main() {", '    let words = vec!["a", "b", "a"];'],
+              ["    let mut counts = HashMap::new();", "    for w in words {", "        *counts.entry(w).or_insert(0) += 1;", "    }"],
+              ['    match counts.get("a") {', '        Some(n) => println!("{n}"),', '        None => println!("0"),', "    }", "}"], ["2"],
+              "Make the empty map, then loop and count each word.",
+              "The map has to exist before the loop can count into it."),
+        fill("Make it print 3.", '''
+use std::collections::HashMap;
+
+fn main() {
+    let mut counts = HashMap::new();
+    for w in vec!["x", "y", "x", "x"] {
+        *counts.entry(w).__(0) += 1;
+    }
+    match counts.get("x") {
+        Some(n) => println!("{n}"),
+        None => println!("0"),
+    }
+}''', ["or_insert", "insert", "get", "unwrap"], ["or_insert"],
+             "`or_insert(0)` starts a missing word at 0, then `+= 1` counts it.",
+             "You need the step that adds a starting value when the key is missing.", output=["3"], wrap=False),
+    ],
+})
+
 # Tokens a lesson must not use before the lesson that teaches them (1-based lesson number).
 GATES = [
     (r"\bi32\b|\bf64\b|\bbool\b|\btrue\b|\bfalse\b|\bas\b", 2),
@@ -1260,4 +1613,7 @@ GATES = [
     (r"\benum\b|\bmatch\b|=>|\b_\b", 10),
     (r"\bOption\b|\bSome\b|\bNone\b|\bResult\b|\bOk\b|\bErr\b|\?|\.get\(|unwrap", 11),
     (r"\btrait\b|\|[a-z][a-z, ]*\||\.iter\(\)|\.map\(|\.sum\(|\.max\(", 12),
+    (r"\bfn\s+\w+<|\bimpl<|\bstruct\s+\w+<|'[a-z]\b(?!')|PartialOrd|\bDisplay\b|\bClone\b|\bCopy\b", 13),
+    (r"\bmod\b|\buse\b|#\[derive|\bpub\b|\{:\?\}|PartialEq|\bEq\b|\bDebug\b|\bu8\b", 14),
+    (r"HashMap|\.insert\(|\.entry\(|or_insert", 15),
 ]

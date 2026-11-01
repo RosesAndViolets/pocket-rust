@@ -97,7 +97,10 @@ def substitute(lines, values):
 
 
 def check_gates(where, n, text):
-    text = text.replace("__", " ")
+    """Only code counts: comments, text in quotes and the "won't compile" chip are skipped."""
+    text = raw = text.replace("__", " ").replace(WONT, " ")
+    text = re.sub(r'"(?:[^"\\]|\\.)*"', '""', text)
+    text = re.sub(r"//[^\n]*", "", text) + (" {:?}" if "{:?}" in raw else "")  # debug printing lives inside quotes
     for pat, lesson in GATES:
         if lesson > n:
             m = re.search(pat, text)
