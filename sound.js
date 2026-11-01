@@ -15,6 +15,10 @@ window.Sfx = (() => {
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   let ctx = null, master = null, noiseBuf = null, silentLoop = null;
+  // iOS breaks the audio engine when the phone locks or the app goes to the background: it can report
+  // "running" afterwards and still play nothing. So after any trip to the background the engine is
+  // marked stale, and the next tap builds a fresh one.
+  let stale = false, sessionType = null;
 
   // ───────── audio session / silent switch ─────────
   function silentWavUrl() {   // 0.5 s of 8-bit 8 kHz silence, built in memory
@@ -29,7 +33,10 @@ window.Sfx = (() => {
   function applySession() {
     const want = s.on && s.ignoreSilent;
     if (navigator.audioSession) {
-      try { navigator.audioSession.type = want ? "playback" : "ambient"; } catch { /* not allowed */ }
+      const type = want ? "playback" : "ambient";
+      if (sessionType !== type) {        // only change it when it really changes; switching it can break the engine
+        try { navigator.audioSession.type = type; sessionType = type; } catch { /* not allowed */ }
+      }
       return;
     }
     if (!isIOS) return;
@@ -42,22 +49,27 @@ window.Sfx = (() => {
   function unlock() {
     if (!s.on) return;
     applySession();
+    if (ctx && (stale || ctx.state === "interrupted" || ctx.state === "closed")) {
+      try { ctx.close(); } catch { /* already gone */ }
+      ctx = null; master = null; noiseBuf = null;
+    }
+    stale = false;
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       ctx = new AC();
       master = ctx.createGain(); master.gain.value = s.volume; master.connect(ctx.destination);
+      ctx.addEventListener("statechange", () => { if (ctx && ctx.state === "interrupted") stale = true; });
     }
     if (ctx.state !== "running") ctx.resume().catch(() => {});
   }
   document.addEventListener("pointerdown", unlock, true);
   document.addEventListener("keydown", unlock, true);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      if (silentLoop) silentLoop.pause();
-      if (navigator.audioSession) try { navigator.audioSession.type = "auto"; } catch { /* not allowed */ }
-    }
+    if (document.visibilityState === "hidden") { stale = true; if (silentLoop) silentLoop.pause(); }
   });
+  window.addEventListener("pagehide", () => { stale = true; });
+  window.addEventListener("pageshow", e => { if (e.persisted) stale = true; });
 
   // ───────── voices ─────────
   const jit = (f, amt = 0.035) => f * (1 + (Math.random() - 0.5) * amt);
@@ -107,7 +119,7 @@ window.Sfx = (() => {
   };
 
   function play(name, arg, delay = 0) {
-    if (!s.on || !ctx || ctx.state !== "running") return;
+    if (!s.on || !ctx || stale || ctx.state !== "running") return;
     const fn = KIT[name]; if (!fn) return;
     const go = () => { try { fn(arg); } catch { /* a dropped sound is fine */ } };
     if (delay) setTimeout(go, delay); else go();
