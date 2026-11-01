@@ -11,7 +11,8 @@ and can be added to the home screen.
 
 | File | What it is |
 | --- | --- |
-| `index.html`, `app.css`, `app.js` | The app. `app.js` routes on the hash: home, `#lesson-<id>`, `#review`, `#sync`. |
+| `index.html`, `app.css`, `app.js` | The app. `app.js` routes on the hash: home, `#lesson-<id>`, `#review`, `#settings`. |
+| `sound.js` | Sound effects (the Bubble Pop kit), made live with Web Audio. No audio files. |
 | `course.json` | The lessons, generated. Don't edit by hand. |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline cache and home-screen install. |
 | `tools/course_src.py` | The lessons as written: cards and problems. Edit this. |
@@ -41,9 +42,17 @@ It needs `rustc` on your PATH. For each problem it checks that:
 If anything fails, it prints what's wrong and leaves `course.json` unchanged. Compiler
 results are cached in `tools/.rustc-cache.json`.
 
+## Sound
+
+Every tap, pop, right and wrong answer has a sound, timed to its animation. The speaker button
+on the home screen turns them on or off; Settings has volume and **Play when iPhone is on
+silent**. With that on, the app asks iOS for the same kind of audio session games use, so sounds
+play even with the silent switch on. Like games, that pauses music from other apps while the app
+is open. Turn it off and the silent switch mutes the app as usual.
+
 ## Sync
 
-Progress is kept in the browser. To share it between devices, open **Sync** and enter a
+Progress is kept in the browser. To share it between devices, open **Settings** and enter a
 GitHub repo, a file path and a fine-grained token that can only read and write that repo's
 contents. The app reads the file, merges it with local progress, and writes it back. When
 you're offline it waits until you're back online.

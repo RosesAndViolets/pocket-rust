@@ -144,6 +144,27 @@ button.ln.ok { background: var(--aqua); }
 .score { font: 800 64px/.9 var(--display); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
 .score small { font-size: 24px; color: var(--ink-soft); letter-spacing: -0.02em; }
 
+/* ───────── settings ───────── */
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: var(--paper); box-shadow: 0 4px 0 var(--ink); cursor: pointer; display: grid; place-items: center;
+  transition: transform .5s var(--spring), box-shadow .5s var(--spring), background .2s; }
+.icon-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); transition-duration: .08s; }
+.icon-btn[aria-pressed="false"] { background: var(--tint); }
+.icon-btn { position: relative; }
+.icon-btn .badge { position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; }
+.brand .row { flex-wrap: nowrap; flex: none; }
+.icon-btn svg { width: 22px; height: 22px; fill: var(--ink); }
+.icon-btn svg .wave { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; }
+.card-h { font: 800 20px var(--display); letter-spacing: -0.02em; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.setting > span, .setting > label { min-width: 0; }
+.setting b { font: 800 15px var(--display); display: block; }
+.setting small { display: block; font-size: 13px; color: var(--ink-soft); }
+.setting input[type=range] { accent-color: var(--grape); width: 55%; }
+.switch { flex: none; width: 60px; height: 36px; border-radius: 999px; border: 3px solid var(--ink); background: var(--tint); box-shadow: 0 3px 0 var(--ink); cursor: pointer; position: relative; padding: 0; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--paper); border: 2.5px solid var(--ink); box-sizing: border-box; transition: transform .5s var(--spring); }
+.switch[aria-pressed="true"] { background: var(--grape); }
+.switch[aria-pressed="true"]::after { transform: translateX(24px); }
+
 /* ───────── sync ───────── */
 .form { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; }

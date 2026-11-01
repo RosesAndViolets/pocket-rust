@@ -67,7 +67,10 @@
     app.innerHTML = `<main class="home">
       <header class="home-top">
         <div class="brand"><h1>Pocket <span>Rust</span></h1>
-          <button class="btn plain small sync-btn" type="button" data-go="#sync"><i class="dot ${sync.dot}"></i>Sync</button></div>
+          <div class="row"><button class="icon-btn" type="button" id="sound-toggle" aria-pressed="${Sfx.settings.on}" aria-label="Sound effects">${speaker(Sfx.settings.on)}</button>
+          <button class="icon-btn sync-btn" type="button" data-go="#settings" aria-label="Settings${Sync.cfg ? ", sync: " + esc(sync.text) : ""}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9L2 13.7v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill-rule="evenodd"/></svg>
+            ${Sync.cfg ? `<i class="dot badge ${sync.dot}"></i>` : ""}</button></div></div>
         <p class="lede"><b>${done} of ${COURSE.lessons.length}</b> lessons done${miss ? ` · <b>${miss}</b> to review` : ""}</p>
         <div class="track" aria-hidden="true"><i style="width:${(done / COURSE.lessons.length) * 100}%"></i></div>
       </header>
@@ -89,8 +92,18 @@
       }).join("")}</ol>
       <p class="foot-note">Every problem is checked against the real Rust compiler (${esc(COURSE.rustc || "rustc")}).</p>
     </main>`;
+    app.querySelector("#sound-toggle").addEventListener("click", e => {
+      const on = !Sfx.settings.on;
+      Sfx.set({ on });
+      e.currentTarget.setAttribute("aria-pressed", on);
+      e.currentTarget.innerHTML = speaker(on);
+      if (on) Sfx.play("place", null, 60);
+    });
     animate(app.firstElementChild);
   }
+  const speaker = on => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/>${on
+    ? '<path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>'
+    : '<path class="wave" d="M17 9l5 6M22 9l-5 6"/>'}</svg>`;
 
   // ───────── player (lesson or review) ─────────
   function player(mode, lesson) {
@@ -165,7 +178,12 @@
       body.innerHTML = h;
       body.dataset.problem = step.type === "problem" ? step.p.id : "";
       just = null; tapped = null;
-      if (motion === "step") { body.scrollTop = 0; animate(body); } else body.classList.remove("enter");
+      if (motion === "step") {
+        body.scrollTop = 0; animate(body);
+        Sfx.play("next");
+        Sfx.words(body.querySelectorAll(".w").length);   // one note per headline word, in step with the animation
+        if (step.type === "done") Sfx.play("complete", null, 350);
+      } else body.classList.remove("enter");
       if (motion === "fb") { const f = body.querySelector(".fb"); if (f) setTimeout(() => f.scrollIntoView({ block: "nearest", behavior: "smooth" }), 80); }
     }
 
@@ -241,6 +259,7 @@
       }
       if (navigator.vibrate) try { navigator.vibrate(s.ok ? 12 : [20, 40, 20]); } catch { /* not allowed */ }
       render("fb");
+      Sfx.play(s.ok ? "right" : "wrong", null, 140);
     }
 
     body.addEventListener("click", e => {
@@ -253,10 +272,11 @@
         if (k < 0) k = s.fill.length - 1;   // all gaps full: the tap replaces the last answer
         s.fill[k] = t.dataset.chip; just = "s" + k;
         tapped = "c" + t.dataset.chip;
-      } else if (t.dataset.slot !== undefined) s.fill[+t.dataset.slot] = null;
-      else if (t.dataset.line !== undefined) s.pick = +t.dataset.line;
-      else if (t.dataset.pool !== undefined) { s.seq.push(s.pool.splice(+t.dataset.pool, 1)[0]); just = "q" + (s.seq.length - 1); }
-      else if (t.dataset.seq !== undefined) s.pool.push(s.seq.splice(+t.dataset.seq, 1)[0]);
+        Sfx.play("tap"); Sfx.play("place", null, 70);   // squish, then the pop as it lands
+      } else if (t.dataset.slot !== undefined) { if (s.fill[+t.dataset.slot]) Sfx.play("remove"); s.fill[+t.dataset.slot] = null; }
+      else if (t.dataset.line !== undefined) { s.pick = +t.dataset.line; Sfx.play("select"); }
+      else if (t.dataset.pool !== undefined) { s.seq.push(s.pool.splice(+t.dataset.pool, 1)[0]); just = "q" + (s.seq.length - 1); Sfx.play("tap"); Sfx.play("place", null, 70); }
+      else if (t.dataset.seq !== undefined) { s.pool.push(s.seq.splice(+t.dataset.seq, 1)[0]); Sfx.play("remove"); }
       else return;
       render();
     });
@@ -366,8 +386,17 @@
   function syncView() {
     const c = Sync.cfg || { token: "", repo: "", path: "pocket-rust/progress.json" };
     app.innerHTML = `<main class="home">
-      <header class="home-top"><div class="brand"><h1>Sync</h1><button class="close" type="button" data-go="" aria-label="Back home">✕</button></div>
-        <p class="lede">Keep your progress on every device by saving it to a file in one of your GitHub repos.</p></header>
+      <header class="home-top"><div class="brand"><h1>Settings</h1><button class="close" type="button" data-go="" aria-label="Back home">✕</button></div>
+      </header>
+      <section class="chunk form" aria-labelledby="sound-h">
+        <b class="card-h" id="sound-h">Sound</b>
+        <div class="setting"><span><b>Sound effects</b></span><button class="switch" type="button" id="snd-on" aria-pressed="${Sfx.settings.on}" aria-label="Sound effects"></button></div>
+        <div class="setting"><label for="snd-vol"><b>Volume</b></label><input type="range" id="snd-vol" min="0" max="100" value="${Math.round(Sfx.settings.volume * 100)}"></div>
+        <div class="setting"><span><b>Play when iPhone is on silent</b><small>While Pocket Rust is open, music from other apps pauses, like it does for games.</small></span>
+          <button class="switch" type="button" id="snd-silent" aria-pressed="${Sfx.settings.ignoreSilent}" aria-label="Play when iPhone is on silent"></button></div>
+      </section>
+      <b class="sec">Sync</b>
+      <p class="lede">Keep your progress on every device by saving it to a file in one of your GitHub repos.</p>
       <form class="chunk form" id="sync-form" autocomplete="off">
         <div class="field"><label for="repo">Repository</label><input id="repo" name="repo" placeholder="your-name/pocket-rust-progress" value="${esc(c.repo)}" required pattern="[\\w.-]+/[\\w.-]+" spellcheck="false" autocapitalize="off">
           <small>owner/name. A private repo is best.</small></div>
@@ -397,6 +426,13 @@
       Sync.run();
     });
     app.querySelector("#forget")?.addEventListener("click", () => { Sync.configure(null); syncView(); });
+    const flip = (id, key) => app.querySelector(id).addEventListener("click", e => {
+      const v = !Sfx.settings[key]; Sfx.set({ [key]: v }); e.currentTarget.setAttribute("aria-pressed", v); Sfx.play(v ? "place" : "remove", null, 60);
+    });
+    flip("#snd-on", "on"); flip("#snd-silent", "ignoreSilent");
+    const vol = app.querySelector("#snd-vol");
+    vol.addEventListener("input", () => Sfx.set({ volume: vol.value / 100 }));
+    vol.addEventListener("change", () => Sfx.play("place"));
     animate(app.firstElementChild);
   }
 
@@ -407,13 +443,17 @@
     window.scrollTo(0, 0);
     if (h.startsWith("lesson-")) { const l = COURSE.lessons.find(x => x.id === h.slice(7)); if (l) return player("lesson", l); }
     if (h === "review" && missedOn().length) return player("review");
-    if (h === "sync") return syncView();
+    if (h === "settings" || h === "sync") return syncView();
     if (h) { history.replaceState(null, "", location.pathname + location.search); }
     home();
   }
   document.addEventListener("click", e => {
     const t = e.target.closest("[data-go]");
     if (t) { e.preventDefault(); const to = t.dataset.go; if (to === "" ) { history.pushState(null, "", location.pathname + location.search); route(); } else location.hash = to; }
+  });
+  document.addEventListener("pointerdown", e => {
+    const t = e.target.closest(".btn:not([disabled]), .lesson-row, .review, .close");
+    if (t) Sfx.play(t.matches(".close, .back") ? "back" : "press");
   });
   window.addEventListener("hashchange", route);
   window.addEventListener("popstate", route);
