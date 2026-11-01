@@ -2,48 +2,26 @@
 // Each sound is timed by app.js to land with its animation. Pitch wobbles a little on repeated
 // sounds so tapping doesn't get grating.
 //
-// iPhone silent switch: by default iOS mutes web sounds when the switch is on. With "Play on silent"
-// on, the page asks for the "playback" audio session (Safari 17+), or on older iOS plays a silent
-// looping <audio> track, which has the same effect. Either way, like any app that plays sound on
-// silent, it pauses music playing in other apps while Pocket Rust is open.
+// iPhone silent switch: sounds follow it, like most apps. The page asks iOS for the "ambient" audio
+// session, so the switch mutes it and music playing in other apps keeps going underneath.
 window.Sfx = (() => {
   "use strict";
   const KEY = "pocket-rust:sound";
-  const defaults = { on: true, volume: 0.7, ignoreSilent: true };
+  const defaults = { on: true, volume: 0.7 };
   let s = { ...defaults };
-  try { Object.assign(s, JSON.parse(localStorage.getItem(KEY)) || {}); } catch { /* storage blocked */ }
-  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  try { const saved = JSON.parse(localStorage.getItem(KEY)) || {}; s.on = saved.on ?? s.on; s.volume = saved.volume ?? s.volume; } catch { /* storage blocked */ }
 
-  let ctx = null, master = null, noiseBuf = null, silentLoop = null;
+  let ctx = null, master = null, noiseBuf = null;
   // iOS breaks the audio engine when the phone locks or the app goes to the background: it can report
   // "running" afterwards and still play nothing. So after any trip to the background the engine is
   // marked stale, and the next tap builds a fresh one.
-  let stale = false, sessionType = null;
+  let stale = false;
 
-  // ───────── audio session / silent switch ─────────
-  function silentWavUrl() {   // 0.5 s of 8-bit 8 kHz silence, built in memory
-    const n = 4000, b = new ArrayBuffer(44 + n), v = new DataView(b);
-    const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
-    str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true);
-    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true);
-    v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, "data"); v.setUint32(40, n, true);
-    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
-    return URL.createObjectURL(new Blob([b], { type: "audio/wav" }));
-  }
-  function applySession() {
-    const want = s.on && s.ignoreSilent;
-    if (navigator.audioSession) {
-      const type = want ? "playback" : "ambient";
-      if (sessionType !== type) {        // only change it when it really changes; switching it can break the engine
-        try { navigator.audioSession.type = type; sessionType = type; } catch { /* not allowed */ }
-      }
-      return;
-    }
-    if (!isIOS) return;
-    if (want) {
-      if (!silentLoop) { silentLoop = new Audio(silentWavUrl()); silentLoop.loop = true; silentLoop.setAttribute("playsinline", ""); silentLoop.volume = 0.01; }
-      if (document.visibilityState === "visible") silentLoop.play().catch(() => {});
-    } else if (silentLoop) silentLoop.pause();
+  // ───────── audio session ─────────
+  let sessionSet = false;
+  function applySession() {      // set once: changing it later can break the engine on iOS
+    if (sessionSet || !navigator.audioSession) return;
+    try { navigator.audioSession.type = "ambient"; sessionSet = true; } catch { /* not allowed */ }
   }
   // Audio may only start from a tap, so every tap makes sure it's awake.
   function unlock() {
@@ -66,7 +44,7 @@ window.Sfx = (() => {
   document.addEventListener("pointerdown", unlock, true);
   document.addEventListener("keydown", unlock, true);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") { stale = true; if (silentLoop) silentLoop.pause(); }
+    if (document.visibilityState === "hidden") stale = true;
   });
   window.addEventListener("pagehide", () => { stale = true; });
   window.addEventListener("pageshow", e => { if (e.persisted) stale = true; });
@@ -131,8 +109,8 @@ window.Sfx = (() => {
     Object.assign(s, patch);
     try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* storage blocked */ }
     if (master) master.gain.value = s.volume;
-    if (s.on) unlock(); else applySession();
+    if (s.on) unlock();
   }
 
-  return { play, words, set, get settings() { return { ...s }; }, isIOS };
+  return { play, words, set, get settings() { return { ...s }; } };
 })();

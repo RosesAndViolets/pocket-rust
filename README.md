@@ -45,10 +45,11 @@ results are cached in `tools/.rustc-cache.json`.
 ## Sound
 
 Every tap, pop, right and wrong answer has a sound, timed to its animation. The speaker button
-on the home screen turns them on or off; Settings has volume and **Play when iPhone is on
-silent**. With that on, the app asks iOS for the same kind of audio session games use, so sounds
-play even with the silent switch on. Like games, that pauses music from other apps while the app
-is open. Turn it off and the silent switch mutes the app as usual.
+on the home screen turns them on or off; Settings has the volume. Sounds follow the phone's
+silent switch, and music from other apps keeps playing underneath.
+
+iOS can leave web audio silent after the phone locks, so whenever the app goes to the background
+`sound.js` throws its audio engine away and builds a fresh one on the next tap.
 
 ## Sync
 

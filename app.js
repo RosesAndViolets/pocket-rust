@@ -392,8 +392,7 @@
         <b class="card-h" id="sound-h">Sound</b>
         <div class="setting"><span><b>Sound effects</b></span><button class="switch" type="button" id="snd-on" aria-pressed="${Sfx.settings.on}" aria-label="Sound effects"></button></div>
         <div class="setting"><label for="snd-vol"><b>Volume</b></label><input type="range" id="snd-vol" min="0" max="100" value="${Math.round(Sfx.settings.volume * 100)}"></div>
-        <div class="setting"><span><b>Play when iPhone is on silent</b><small>While Pocket Rust is open, music from other apps pauses, like it does for games.</small></span>
-          <button class="switch" type="button" id="snd-silent" aria-pressed="${Sfx.settings.ignoreSilent}" aria-label="Play when iPhone is on silent"></button></div>
+        <p class="setting-note">Sounds follow your phone's silent switch, and music from other apps keeps playing.</p>
       </section>
       <b class="sec">Sync</b>
       <p class="lede">Keep your progress on every device by saving it to a file in one of your GitHub repos.</p>
@@ -429,7 +428,7 @@
     const flip = (id, key) => app.querySelector(id).addEventListener("click", e => {
       const v = !Sfx.settings[key]; Sfx.set({ [key]: v }); e.currentTarget.setAttribute("aria-pressed", v); Sfx.play(v ? "place" : "remove", null, 60);
     });
-    flip("#snd-on", "on"); flip("#snd-silent", "ignoreSilent");
+    flip("#snd-on", "on");
     const vol = app.querySelector("#snd-vol");
     vol.addEventListener("input", () => Sfx.set({ volume: vol.value / 100 }));
     vol.addEventListener("change", () => Sfx.play("place"));
