@@ -1,7 +1,7 @@
 // Offline support: the app and its lessons are cached on first visit.
 // Own files: served from cache, refreshed in the background. Fonts: cached as they load.
 // GitHub (sync) is never cached.
-const CACHE = "pocket-rust-v6";
+const CACHE = "pocket-rust-v7";
 const SHELL = ["./", "index.html", "app.css", "app.js", "sound.js", "course.json", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 

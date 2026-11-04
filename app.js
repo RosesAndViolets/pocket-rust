@@ -40,7 +40,10 @@
     });
     return out + (cm ? `<span class="cm">${esc(cm)}</span>` : "");
   }
-  const codeBlock = lines => `<div class="code">` + lines.map((l, n) => `<div class="ln"><span class="no">${n + 1}</span><span>${hl(l)}</span></div>`).join("") + `</div>`;
+  // Long lines wrap instead of scrolling sideways. The wrapped part hangs two spaces deeper than
+  // the line's own indent, so it reads as a continuation.
+  const hang = l => { const n = l.length - l.trimStart().length; return `class="src" style="--ind:${n}ch"`; };
+  const codeBlock = lines => `<div class="code">` + lines.map((l, n) => `<div class="ln"><span class="no">${n + 1}</span><span ${hang(l)}>${hl(l)}</span></div>`).join("") + `</div>`;
   const words = s => s.split(" ").map((w, i) => `<span class="w" style="--w:${i}">${esc(w)}</span>`).join(" ");
   const shuffle = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(v => v[1]);
   const rustc = text => esc(text).replace(/^(error(\[E\d+\])?)/m, '<span class="e">$1</span>').replace(/^(help|note)(:)/gm, '<span class="h">$1</span>$2');
@@ -204,19 +207,19 @@
         h += `<div class="code">` + p.lines.map((l, n) => {
           const parts = l.split("__");
           const inner = parts.map((part, j) => hl(part) + (j < parts.length - 1 ? slot(gap++) : "")).join("");
-          return `<div class="ln"><span class="no">${n + 1}</span><span>${inner}</span></div>`;
+          return `<div class="ln"><span class="no">${n + 1}</span><span ${hang(l)}>${inner}</span></div>`;
         }).join("") + `</div>` + bank();
       } else if (p.type === "output") {
         h += codeBlock(p.lines) + `<div class="out"><span class="lbl">Printed</span>` + p.answer.map((_, k) => `<div>${slot(k)}</div>`).join("") + `</div>` + bank();
       } else if (p.type === "error") {
         h += `<div class="code">` + p.lines.map((l, n) => {
           const cls = s.pick === n ? (locked ? "ok" : "sel") : "";
-          return `<button type="button" class="ln ${cls}" data-line="${n}" aria-pressed="${s.pick === n}"><span class="no">${n + 1}</span><span>${hl(l)}</span></button>`;
+          return `<button type="button" class="ln ${cls}" data-line="${n}" aria-pressed="${s.pick === n}"><span class="no">${n + 1}</span><span ${hang(l)}>${hl(l)}</span></button>`;
         }).join("") + `</div>`;
       } else if (p.type === "order") {
-        h += `<div class="code">` + p.head.map(l => `<div class="ln"><span>${hl(l)}</span></div>`).join("") +
+        h += `<div class="code">` + p.head.map(l => `<div class="ln"><span ${hang(l)}>${hl(l)}</span></div>`).join("") +
           `<div class="answer">` + s.seq.map((it, j) => `<button type="button" class="chip line ${just === "q" + j ? "just" : ""}" data-seq="${j}">${hl(it.t)}</button>`).join("") + `</div>` +
-          p.tail.map(l => `<div class="ln"><span>${hl(l)}</span></div>`).join("") + `</div>`;
+          p.tail.map(l => `<div class="ln"><span ${hang(l)}>${hl(l)}</span></div>`).join("") + `</div>`;
         h += `<div class="bank lines">` + s.pool.map((it, j) => `<button type="button" class="chip line" data-pool="${j}">${hl(it.t)}</button>`).join("") + `</div>`;
       }
       if (s.done) {

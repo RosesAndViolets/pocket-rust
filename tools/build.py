@@ -8,6 +8,7 @@ What is checked:
   output - the program prints exactly `answer` (or fails to compile, if the answer is "won't compile").
   order  - the order as written works; every other order of the lines is tried, and each one
            that also prints `output` is accepted by the app.
+  cards  - every lesson card's code compiles on its own, so no card leans on an earlier one.
   gates  - no code uses something a later lesson teaches.
 
 Usage: python3 tools/build.py        (needs rustc on PATH)
@@ -108,6 +109,16 @@ def check_gates(where, n, text):
                 problem(where, f"uses `{m.group(0)}`, which lesson {lesson} teaches")
 
 
+def check_card(where, c, pool):
+    """A card must make sense on its own: its code compiles with nothing from earlier cards.
+    Code without its own `fn main` is put inside one (structs, impls and fns are allowed there too)."""
+    lines = lines_of(c["code"])
+    r = pool.submit(compile_run, program(lines, "fn main" not in c["code"])).result()
+    if not r["ok"]:
+        first = r["diags"][0]["rendered"].split("\n")[0] if r["diags"] else "it doesn't run"
+        problem(where, f"doesn't work on its own: {first}")
+
+
 def check_fill(where, p, pool):
     lines = lines_of(p["code"])
     gaps = sum(l.count("__") for l in lines)
@@ -192,6 +203,7 @@ def main():
                  "cards": [], "problems": []}
             for c in lesson["cards"]:
                 check_gates(f"{lesson['id']} card '{c['h']}'", n, c["code"])
+                check_card(f"{lesson['id']} card '{c['h']}'", c, pool)
                 L["cards"].append({"h": c["h"], "p": md(c["p"]), "code": lines_of(c["code"]),
                                    "note": md(c["note"]) if c.get("note") else None})
             for k, p in enumerate(lesson["problems"], 1):

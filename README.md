@@ -37,6 +37,8 @@ It needs `rustc` on your PATH. For each problem it checks that:
   answer is "won't compile".
 - **Order the lines:** the written order works. Every other order is also compiled and run,
   and any that print the same output are accepted too.
+- **Every card stands alone:** each lesson card's code compiles by itself, so a card never
+  leans on a name (`p`, `Point`, `ages`…) that only an earlier card showed.
 - **No skipping ahead:** no code uses something a later lesson teaches (the `GATES` list).
 
 If anything fails, it prints what's wrong and leaves `course.json` unchanged. Compiler

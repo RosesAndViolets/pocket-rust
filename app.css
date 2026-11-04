@@ -91,6 +91,7 @@ code { font: 700 .82em var(--mono); background: var(--paper); border: 2px solid 
   font: 800 18px/1 var(--display); cursor: pointer; transition: transform .5s var(--spring), box-shadow .5s var(--spring); }
 .close:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); transition-duration: .08s; }
 .count { font: 800 13px var(--display); background: var(--lemon); border: 2.5px solid var(--ink); border-radius: 999px; padding: 1px 10px; box-shadow: 0 3px 0 var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pbody > * { flex-shrink: 0; }   /* long cards scroll; nothing gets squashed or cut off */
 .pbody { flex: 1; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 16px;
   padding-block: 12px 24px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
 .pfoot { display: flex; gap: 10px; padding-block: 10px 18px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
@@ -106,7 +107,8 @@ code { font: 700 .82em var(--mono); background: var(--paper); border: 2px solid 
 .dots i.on { background: var(--grape); transform: scale(1.35); }
 
 .code { background: var(--paper); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 0 6px 0 var(--ink); padding: 10px 0; font: 13px/1.75 var(--mono); overflow-x: auto; }
-.ln { display: flex; padding: 0 14px; white-space: pre; min-width: max-content; }
+.ln { display: flex; padding: 0 14px; white-space: pre-wrap; }
+.ln .src { flex: 1; min-width: 0; overflow-wrap: anywhere; padding-left: calc(var(--ind, 0ch) + 2ch); text-indent: calc(-2ch - var(--ind, 0ch)); }
 .ln .no { width: 2.2ch; flex: none; user-select: none; text-align: right; margin-right: 1.4ch; opacity: .4; }
 .ln .cm { opacity: .5; }
 .tk-k { color: var(--k); font-weight: 700; } .tk-s { color: var(--s); } .tk-n { color: var(--n); } .tk-m { color: var(--m); } .tk-t { color: var(--t); }
@@ -123,7 +125,7 @@ button.ln.ok { background: var(--aqua); }
   transition: transform .45s var(--spring), box-shadow .45s var(--spring), background .2s; }
 .chip:active:not([disabled]) { transform: translateY(5px) scale(1.04, .94); box-shadow: 0 0 0 var(--ink); transition-duration: .08s; }
 .chip[disabled] { opacity: .35; cursor: default; }
-.chip.line { font-weight: 600; font-size: 13px; text-align: left; white-space: pre; width: 100%; border-radius: 16px; }
+.chip.line { font-weight: 600; font-size: 13px; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; width: 100%; border-radius: 16px; }
 .answer { min-height: 58px; padding: 6px; display: flex; flex-direction: column; gap: 8px; border: 3px dashed var(--ink); border-radius: 20px; background: #ffffff70; }
 .answer:empty::before { content: "Tap lines below to place them here"; font: 600 13px var(--body); padding: 12px; color: var(--ink-soft); }
 .answer .chip { background: var(--lemon); }
@@ -193,3 +195,6 @@ button.ln.ok { background: var(--aqua); }
 @keyframes wobble { 25% { rotate: -2deg; } 50% { rotate: 2deg; } 75% { rotate: -1deg; } }
 .home.enter > * { animation-duration: .8s; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Show code exactly as it's typed: no joined symbols like -> turning into an arrow. */
+code, .code, .chip, .slot, .rustc, .out, .field input, .code * { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }

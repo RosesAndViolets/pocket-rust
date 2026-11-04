@@ -1402,12 +1402,21 @@
      "h": "Methods live in impl",
      "p": "Functions inside <code>impl Point { }</code> belong to <code>Point</code>. A method&#x27;s first parameter is <code>&amp;self</code>: a borrow of the value it&#x27;s called on.",
      "code": [
+      "struct Point {",
+      "    x: i32,",
+      "    y: i32,",
+      "}",
+      "",
       "impl Point {",
       "    fn total(&self) -> i32 {",
       "        self.x + self.y",
       "    }",
       "}",
-      "// p.total() gives 3"
+      "",
+      "fn main() {",
+      "    let p = Point { x: 1, y: 2 };",
+      "    println!(\"{}\", p.total()); // 3",
+      "}"
      ],
      "note": "Use <code>&amp;mut self</code> for a method that changes the value. The variable must then be <code>mut</code>."
     },
@@ -1415,12 +1424,21 @@
      "h": "Type::new() explained",
      "p": "A function in <code>impl</code> with no <code>self</code> is called on the type with <code>::</code>. By convention a function that builds a new value is called <code>new</code>. <code>Self</code> is shorthand for the type&#x27;s own name.",
      "code": [
+      "struct Point {",
+      "    x: i32,",
+      "    y: i32,",
+      "}",
+      "",
       "impl Point {",
       "    fn new(x: i32, y: i32) -> Self {",
       "        Point { x: x, y: y }",
       "    }",
       "}",
-      "// let p = Point::new(1, 2);"
+      "",
+      "fn main() {",
+      "    let p = Point::new(1, 2);",
+      "    println!(\"{}\", p.y); // 2",
+      "}"
      ],
      "note": "<code>String::from(&quot;hi&quot;)</code> from Lesson 5 is exactly this: a function belonging to <code>String</code>."
     }
@@ -1837,6 +1855,13 @@
      "h": "match handles each choice",
      "p": "<code>match</code> compares a value against patterns, top to bottom, and runs the first one that fits. <code>=&gt;</code> separates a pattern from what to do.",
      "code": [
+      "enum Light {",
+      "    Red,",
+      "    Yellow,",
+      "    Green,",
+      "}",
+      "",
+      "let l = Light::Green;",
       "match l {",
       "    Light::Red => println!(\"stop\"),",
       "    Light::Yellow => println!(\"slow\"),",
@@ -2086,6 +2111,7 @@
      "h": "Open an Option with match",
      "p": "To use the value, <code>match</code> on both cases. The compiler won&#x27;t let you forget <code>None</code>.",
      "code": [
+      "let nums = vec![10, 20];",
       "match nums.get(5) {",
       "    Some(n) => println!(\"found {n}\"),",
       "    None => println!(\"nothing there\"),",
@@ -2111,9 +2137,23 @@
      "h": "? passes the error along",
      "p": "Inside a function that returns <code>Result</code>, writing <code>?</code> after a call gives you the value if it&#x27;s <code>Ok</code>, or returns the <code>Err</code> straight away.",
      "code": [
+      "fn divide(a: i32, b: i32) -> Result<i32, String> {",
+      "    if b == 0 {",
+      "        return Err(String::from(\"divide by zero\"));",
+      "    }",
+      "    Ok(a / b)",
+      "}",
+      "",
       "fn half_of_div(a: i32, b: i32) -> Result<i32, String> {",
       "    let d = divide(a, b)?;  // stops here on Err",
       "    Ok(d / 2)",
+      "}",
+      "",
+      "fn main() {",
+      "    match half_of_div(10, 0) {",
+      "        Ok(v) => println!(\"{v}\"),",
+      "        Err(e) => println!(\"{e}\"), // divide by zero",
+      "    }",
       "}"
      ],
      "note": "<code>.unwrap()</code> also takes the value out, but crashes the program on <code>None</code> or <code>Err</code>. It&#x27;s fine for quick experiments."
@@ -2323,6 +2363,10 @@
      "h": "impl Trait for Type",
      "p": "<code>impl Speak for Dog</code> keeps the promise for <code>Dog</code>. Every method in the trait must be written.",
      "code": [
+      "trait Speak {",
+      "    fn speak(&self) -> String;",
+      "}",
+      "",
       "struct Dog {",
       "    name: String,",
       "}",
@@ -2985,8 +3029,12 @@
      "h": "Getting a value gives an Option",
      "p": "The key might not be there, so <code>get</code> returns an <code>Option</code>, just like <code>.get</code> on a Vec in Lesson 11.",
      "code": [
+      "use std::collections::HashMap;",
+      "",
+      "let mut ages = HashMap::new();",
+      "ages.insert(\"Ana\", 31);",
       "match ages.get(\"Ana\") {",
-      "    Some(age) => println!(\"{age}\"),",
+      "    Some(age) => println!(\"{age}\"),  // 31",
       "    None => println!(\"not found\"),",
       "}"
      ],
@@ -2996,6 +3044,8 @@
      "h": "Counting with entry",
      "p": "<code>entry(key).or_insert(0)</code> finds the value for a key, adding 0 first if it&#x27;s missing. It gives back a <code>&amp;mut</code> to the value; the <code>*</code> in front means &quot;the value itself&quot;, so <code>+= 1</code> changes it.",
      "code": [
+      "use std::collections::HashMap;",
+      "",
       "let mut counts = HashMap::new();",
       "for w in vec![\"a\", \"b\", \"a\"] {",
       "    *counts.entry(w).or_insert(0) += 1;",
@@ -3008,6 +3058,11 @@
      "h": "Looping over a HashMap",
      "p": "<code>for (key, value) in &amp;map</code> visits every pair. The two names in brackets unpack each pair.",
      "code": [
+      "use std::collections::HashMap;",
+      "",
+      "let mut ages = HashMap::new();",
+      "ages.insert(\"Ana\", 31);",
+      "ages.insert(\"Bo\", 27);",
       "for (name, age) in &ages {",
       "    println!(\"{name} is {age}\");",
       "}"

@@ -679,22 +679,40 @@ fn main() {
         card("Methods live in impl",
              "Functions inside `impl Point { }` belong to `Point`. A method's first parameter is `&self`: a borrow of the value it's called on.",
              '''
+struct Point {
+    x: i32,
+    y: i32,
+}
+
 impl Point {
     fn total(&self) -> i32 {
         self.x + self.y
     }
 }
-// p.total() gives 3''',
+
+fn main() {
+    let p = Point { x: 1, y: 2 };
+    println!("{}", p.total()); // 3
+}''',
              "Use `&mut self` for a method that changes the value. The variable must then be `mut`."),
         card("Type::new() explained",
              "A function in `impl` with no `self` is called on the type with `::`. By convention a function that builds a new value is called `new`. `Self` is shorthand for the type's own name.",
              '''
+struct Point {
+    x: i32,
+    y: i32,
+}
+
 impl Point {
     fn new(x: i32, y: i32) -> Self {
         Point { x: x, y: y }
     }
 }
-// let p = Point::new(1, 2);''',
+
+fn main() {
+    let p = Point::new(1, 2);
+    println!("{}", p.y); // 2
+}''',
              "`String::from(\"hi\")` from Lesson 5 is exactly this: a function belonging to `String`."),
     ],
     "problems": [
@@ -895,6 +913,13 @@ let l = Light::Green;'''),
         card("match handles each choice",
              "`match` compares a value against patterns, top to bottom, and runs the first one that fits. `=>` separates a pattern from what to do.",
              '''
+enum Light {
+    Red,
+    Yellow,
+    Green,
+}
+
+let l = Light::Green;
 match l {
     Light::Red => println!("stop"),
     Light::Yellow => println!("slow"),
@@ -1027,6 +1052,7 @@ let b = nums.get(5);  // None, no crash'''),
         card("Open an Option with match",
              "To use the value, `match` on both cases. The compiler won't let you forget `None`.",
              '''
+let nums = vec![10, 20];
 match nums.get(5) {
     Some(n) => println!("found {n}"),
     None => println!("nothing there"),
@@ -1044,9 +1070,23 @@ fn divide(a: i32, b: i32) -> Result<i32, String> {
         card("? passes the error along",
              "Inside a function that returns `Result`, writing `?` after a call gives you the value if it's `Ok`, or returns the `Err` straight away.",
              '''
+fn divide(a: i32, b: i32) -> Result<i32, String> {
+    if b == 0 {
+        return Err(String::from("divide by zero"));
+    }
+    Ok(a / b)
+}
+
 fn half_of_div(a: i32, b: i32) -> Result<i32, String> {
     let d = divide(a, b)?;  // stops here on Err
     Ok(d / 2)
+}
+
+fn main() {
+    match half_of_div(10, 0) {
+        Ok(v) => println!("{v}"),
+        Err(e) => println!("{e}"), // divide by zero
+    }
 }''',
              "`.unwrap()` also takes the value out, but crashes the program on `None` or `Err`. It's fine for quick experiments."),
     ],
@@ -1152,6 +1192,10 @@ trait Speak {
         card("impl Trait for Type",
              "`impl Speak for Dog` keeps the promise for `Dog`. Every method in the trait must be written.",
              '''
+trait Speak {
+    fn speak(&self) -> String;
+}
+
 struct Dog {
     name: String,
 }
@@ -1509,13 +1553,19 @@ fn main() {
         card("Getting a value gives an Option",
              "The key might not be there, so `get` returns an `Option`, just like `.get` on a Vec in Lesson 11.",
              '''
+use std::collections::HashMap;
+
+let mut ages = HashMap::new();
+ages.insert("Ana", 31);
 match ages.get("Ana") {
-    Some(age) => println!("{age}"),
+    Some(age) => println!("{age}"),  // 31
     None => println!("not found"),
 }'''),
         card("Counting with entry",
              "`entry(key).or_insert(0)` finds the value for a key, adding 0 first if it's missing. It gives back a `&mut` to the value; the `*` in front means \"the value itself\", so `+= 1` changes it.",
              '''
+use std::collections::HashMap;
+
 let mut counts = HashMap::new();
 for w in vec!["a", "b", "a"] {
     *counts.entry(w).or_insert(0) += 1;
@@ -1525,6 +1575,11 @@ for w in vec!["a", "b", "a"] {
         card("Looping over a HashMap",
              "`for (key, value) in &map` visits every pair. The two names in brackets unpack each pair.",
              '''
+use std::collections::HashMap;
+
+let mut ages = HashMap::new();
+ages.insert("Ana", 31);
+ages.insert("Bo", 27);
 for (name, age) in &ages {
     println!("{name} is {age}");
 }''',
