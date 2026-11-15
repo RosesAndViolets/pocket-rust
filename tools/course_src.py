@@ -1655,6 +1655,307 @@ fn main() {
     ],
 })
 
+# ─────────────────────────────── 16 ───────────────────────────────
+# Adapted from Akira Nishikawa's Rust Compile Challenge (MIT license). See README, Credits.
+COURSE.append({
+    "id": "fixit", "title": "Fix the compiler",
+    "summary": "Real puzzles: programs the compiler rejects, and the one change that fixes each.",
+    "cards": [
+        card("Every problem here is broken",
+             "Each program in this lesson fails to compile. Your job: find the line, or pick the one change that makes it work. They use everything from the earlier lessons.",
+             '''
+let mut total = 0;
+total += 5;
+println!("{total}");  // 5''',
+             "Take out `mut` and Rust stops with error E0384: you can't change a variable that isn't `mut`."),
+        card("The error code is a clue",
+             "Every compiler error has a code like `E0382`. The same mistake always gets the same code, so you start to recognise them.",
+             '''
+let s = String::from("hi");
+let t = s.clone();  // without .clone(): E0382, s was moved
+println!("{s} {t}");''',
+             "On a computer, `rustc --explain E0382` prints a long explanation of any code. These puzzles come from Akira Nishikawa's Rust Compile Challenge."),
+    ],
+    "problems": [
+        fill("Pick the fix so it counts to 3.", '''
+fn main() {
+    let __ = 0;
+    while count < 3 {
+        count += 1;
+        println!("count={count}");
+    }
+}''', ["mut count", "count", "ref count", "const count"], ["mut count"],
+             "`count` changes inside the loop, so it has to be `mut`.",
+             "Which line changes `count`? A variable can only change if it says so.",
+             output=["count=1", "count=2", "count=3"], wrap=False),
+        fill("Pick the fix so the match works.", '''
+fn square(x: Option<i64>) -> Option<i64> {
+    match x {
+        __(i) => Some(i * i),
+        None => None,
+    }
+}
+
+fn main() {
+    println!("{}", square(Some(8)).unwrap_or(0));
+}''', ["Some", "Ok", "Err", "None"], ["Some"],
+             "An `Option` is either `Some` or `None`. `Ok` and `Err` belong to `Result`.",
+             "Look at the type of `x`. Which two shapes can it have?", output=["64"], wrap=False),
+        fill("Pick the fix so the list still prints after the loop.", '''
+fn main() {
+    let scores = vec![100, 92, 84];
+    for score in __ {
+        println!("{score}");
+    }
+    println!("{:?}", scores);
+}''', ["&scores", "scores", "scores.into_iter()", "*scores"], ["&scores"],
+             "Looping over `&scores` only borrows the list, so it's still there for the last line.",
+             "Looping over `scores` itself moves the list into the loop. How do you just borrow it?",
+             output=["100", "92", "84", "[100, 92, 84]"], wrap=False),
+        fill("Pick the fix so every score goes up by 10.", '''
+fn main() {
+    let mut scores = vec![100, 92, 84];
+    for score in scores.iter_mut() {
+        __ += 10;
+    }
+    println!("{:?}", scores);
+}''', ["*score", "score", "&score", "mut score"], ["*score"],
+             "`iter_mut` hands you a `&mut` to each number. `*score` means the number itself, so `+= 10` changes it.",
+             "`score` is a reference, not a number. How do you reach the value behind it?",
+             output=["[110, 102, 94]"], wrap=False),
+        fill("Pick the fix so it prints the zodiac animal for 2031.", '''
+const ANIMALS: [&str; 12] = [
+    "monkey", "rooster", "dog", "pig",
+    "rat", "ox", "tiger", "rabbit",
+    "dragon", "snake", "horse", "goat",
+];
+
+fn main() {
+    let year: u32 = 2031;
+    let i = year % 12;
+    println!("{}", ANIMALS[i as __]);
+}''', ["usize", "u32", "i64", "u8"], ["usize"],
+             "Rust only lets you index an array with a `usize`, so `i` is turned into one with `as usize`.",
+             "Only one number type is allowed inside `[ ]`. Which one is made for positions?",
+             output=["pig"], wrap=False),
+        err("Which line does the compiler reject?", '''
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+fn add(p1: Point, p2: Point) -> Point {
+    p1.x += p2.x;
+    p1.y += p2.y;
+    p1
+}
+
+fn main() {
+    let p = add(Point { x: 1, y: 3 }, Point { x: 2, y: 4 });
+    println!("{} {}", p.x, p.y);
+}''', 7, "E0594",
+            "`p1` is a parameter without `mut`, so its fields can't change. The fix: `fn add(mut p1: Point, ...)`.",
+            "Look for the first line that changes something. Was that thing allowed to change?"),
+        fill("Pick the fix so it prints hello.", '''
+fn main() {
+    let a = Some(String::from("hello"));
+    println!("{}", a.__);
+}''', ["unwrap()", "clone()", "to_string()", "len()"], ["unwrap()"],
+             "`a` is an `Option`, which `{}` can't print. `unwrap()` takes the String out of the `Some`.",
+             "`{}` can print a String but not an Option. How do you get the String out?",
+             output=["hello"], wrap=False),
+        fill("Pick the fix so it prints the value at position 4.", '''
+fn get(list: &[i32], index: __) -> Option<&i32> {
+    list.get(index)
+}
+
+fn main() {
+    let values = [1, 2, 5, 10, 15];
+    println!("{:?}", get(&values, 4));
+}''', ["usize", "i64", "u32", "i32"], ["usize"],
+             "`get` takes a position, and positions are always `usize`.",
+             "Same rule as indexing: which number type stands for a position?",
+             output=["Some(15)"], wrap=False),
+        err("Which line does the compiler reject?", '''
+use std::fmt::Display;
+
+struct Pair<T> { a: T, b: T }
+struct Note { n: i32 }
+
+trait Show { fn show(&self); }
+
+impl<T: Display> Show for Pair<T> {
+    fn show(&self) { println!("{} {}", self.a, self.b); }
+}
+
+fn main() {
+    let p = Pair { a: 1, b: 2 };
+    p.show();
+    let q = Pair { a: Note { n: 1 }, b: Note { n: 2 } };
+    q.show();
+}''', 16, "E0599",
+            "`show` only exists for a `Pair` whose `T` is `Display`. `Note` isn't, so `q` has no `show`.",
+            "Look at the `impl` line: it only covers some kinds of `Pair`. Which pair isn't one of them?"),
+        fill("Pick the fix so pop can change the list.", '''
+fn main() {
+    let mut a = vec![3, 2, 1];
+    a.push(4);
+    let b = __;
+    println!("{:?}", b.pop());
+}''', ["&mut a", "&a", "&a[0]", "*a"], ["&mut a"],
+             "`pop` changes the list, so `b` needs a mutable borrow: `&mut a`.",
+             "A plain `&` borrow can only look. `pop` needs to change the list.",
+             output=["Some(4)"], wrap=False),
+        err("Which line does the compiler reject?", '''
+#[derive(Debug)]
+struct Person {
+    name: &str,
+}
+
+fn main() {
+    let p = Person { name: "Mia" };
+    println!("{:?}", p);
+}''', 3, "E0106",
+            "A struct holding a borrow has to say how long it lives: `struct Person<'a> { name: &'a str }`.",
+            "`main` is fine. Which line holds a borrow without a lifetime?"),
+        fill("Pick the fix so the struct can hold a borrowed name.", '''
+struct Person<'a> {
+    name: &__ str,
+}
+
+impl<'a> Person<'a> {
+    fn name(&self) -> &str {
+        self.name
+    }
+}
+
+fn main() {
+    let p = Person { name: "Mia" };
+    println!("{}", p.name());
+}''', ["'a", "'b", "'_", "mut"], ["'a"],
+             "The struct declares `'a`, and the field uses it: `&'a str`.",
+             "Use the lifetime the struct already names in `<' '>`.",
+             output=["Mia"], wrap=False),
+        fill("Pick the fix so the function can return text.", '''
+fn hello() -> &__ str {
+    "hello world"
+}
+
+fn main() {
+    println!("{}", hello());
+}''', ["'static", "'a", "'_", "mut"], ["'static"],
+             "Text in quotes lives for the whole program. That lifetime is called `'static`.",
+             "There's no input to borrow from. How long does text in quotes live?",
+             output=["hello world"], wrap=False),
+        fill("Pick the fix so say() works for any car.", '''
+trait Car { fn speed(&self) -> i32; }
+
+struct Van { speed: i32 }
+
+impl Car for Van {
+    fn speed(&self) -> i32 { self.speed }
+}
+
+struct Owner<T: Car> { car: T }
+
+impl__ Owner<T> {
+    fn say(&self) { println!("{}", self.car.speed()); }
+}
+
+fn main() {
+    let o = Owner { car: Van { speed: 100 } };
+    o.say();
+}''', ["<T: Car>", "<T>", "<Van>", "<Car>"], ["<T: Car>"],
+             "The struct only allows a `T` that is a `Car`, so the `impl` must promise the same: `impl<T: Car>`.",
+             "Compare with the `struct Owner` line. What does it require of `T`?",
+             output=["100"], wrap=False),
+        err("Which line does the compiler reject?", '''
+struct Pair<T, T> {
+    a: T,
+    b: T,
+}
+
+fn main() {
+    let x = Pair { a: 1, b: "two" };
+    println!("{} {}", x.a, x.b);
+}''', 1, "E0403",
+            "Two type parameters can't share a name. Call them `<T, U>`, and give `b` the type `U`.",
+            "Look at the names inside `< >`."),
+        fill("Pick the fix so a and b can be different types.", '''
+struct Pair<T, U> {
+    a: T,
+    b: __,
+}
+
+fn main() {
+    let x = Pair { a: 1, b: "two" };
+    println!("{} {}", x.a, x.b);
+}''', ["U", "T", "i32", "String"], ["U"],
+             "`a` is a number and `b` is text, so they need different type parameters: `T` and `U`.",
+             "`b` holds text in quotes. Which type covers it without forcing it to match `a`?",
+             output=["1 two"], wrap=False),
+        fill("Pick the fix so speed_of takes any car.", '''
+trait Car { fn speed(&self) -> i32; }
+
+struct Bike { speed: i32 }
+
+impl Car for Bike {
+    fn speed(&self) -> i32 { self.speed }
+}
+
+fn speed_of<T: __>(c: T) -> i32 {
+    c.speed()
+}
+
+fn main() {
+    println!("{}", speed_of(Bike { speed: 30 }));
+}''', ["Car", "Display", "Clone", "Copy"], ["Car"],
+             "`speed_of` calls `.speed()`, which only a `Car` has. `T: Car` promises it.",
+             "Which trait gives `c` the `speed` method?",
+             output=["30"], wrap=False),
+        fill("Pick the fix so main can call hello.", '''
+mod greet {
+    __ fn hello() {
+        println!("hello");
+    }
+}
+
+fn main() {
+    greet::hello();
+}''', ["pub", "use", "mod", "mut"], ["pub"],
+             "Things inside a `mod` are private. `pub` lets code outside call them.",
+             "`hello` lives inside a module. What lets code outside that module use it?",
+             output=["hello"], wrap=False),
+        fill("Pick the fix so the sword can keep its name.", '''
+struct Sword<'a> {
+    name: __,
+    damage: i32,
+}
+
+fn main() {
+    let s = Sword { name: "Night Blade", damage: 10 };
+    println!("{} hits for {}", s.name, s.damage);
+}''', ["&'a str", "str", "&str", "String"], ["&'a str"],
+             "A bare `str` has no fixed size, so a struct can't hold it. A borrow can: `&'a str`, using the struct's lifetime.",
+             "The struct names a lifetime `'a`. Which type is a borrow that uses it?",
+             output=["Night Blade hits for 10"], wrap=False),
+        err("Which line does the compiler reject?", '''
+use std::collections::HashMap;
+
+fn add(m: &HashMap<String, String>) {
+    m.insert(String::from("color"), String::from("red"));
+}
+
+fn main() {
+    let map = HashMap::new();
+    add(&map);
+    println!("{:?}", map);
+}''', 4, "E0596",
+            "`m` is a plain `&` borrow, so it can't change the map. It needs `&mut HashMap<...>`, and `main` needs `let mut map` and `add(&mut map)`.",
+            "Which line tries to change something it only borrowed to look at?"),
+    ],
+})
+
 # Tokens a lesson must not use before the lesson that teaches them (1-based lesson number).
 GATES = [
     (r"\bi32\b|\bf64\b|\bbool\b|\btrue\b|\bfalse\b|\bas\b", 2),

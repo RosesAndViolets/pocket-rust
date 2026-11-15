@@ -3233,6 +3233,563 @@
      ]
     }
    ]
+  },
+  {
+   "id": "fixit",
+   "n": 16,
+   "title": "Fix the compiler",
+   "summary": "Real puzzles: programs the compiler rejects, and the one change that fixes each.",
+   "cards": [
+    {
+     "h": "Every problem here is broken",
+     "p": "Each program in this lesson fails to compile. Your job: find the line, or pick the one change that makes it work. They use everything from the earlier lessons.",
+     "code": [
+      "let mut total = 0;",
+      "total += 5;",
+      "println!(\"{total}\");  // 5"
+     ],
+     "note": "Take out <code>mut</code> and Rust stops with error E0384: you can&#x27;t change a variable that isn&#x27;t <code>mut</code>."
+    },
+    {
+     "h": "The error code is a clue",
+     "p": "Every compiler error has a code like <code>E0382</code>. The same mistake always gets the same code, so you start to recognise them.",
+     "code": [
+      "let s = String::from(\"hi\");",
+      "let t = s.clone();  // without .clone(): E0382, s was moved",
+      "println!(\"{s} {t}\");"
+     ],
+     "note": "On a computer, <code>rustc --explain E0382</code> prints a long explanation of any code. These puzzles come from Akira Nishikawa&#x27;s Rust Compile Challenge."
+    }
+   ],
+   "problems": [
+    {
+     "id": "fixit-1",
+     "type": "fill",
+     "prompt": "Pick the fix so it counts to 3.",
+     "good": "<code>count</code> changes inside the loop, so it has to be <code>mut</code>.",
+     "bad": "Which line changes <code>count</code>? A variable can only change if it says so.",
+     "lines": [
+      "fn main() {",
+      "    let __ = 0;",
+      "    while count < 3 {",
+      "        count += 1;",
+      "        println!(\"count={count}\");",
+      "    }",
+      "}"
+     ],
+     "bank": [
+      "mut count",
+      "count",
+      "ref count",
+      "const count"
+     ],
+     "answer": [
+      "mut count"
+     ]
+    },
+    {
+     "id": "fixit-2",
+     "type": "fill",
+     "prompt": "Pick the fix so the match works.",
+     "good": "An <code>Option</code> is either <code>Some</code> or <code>None</code>. <code>Ok</code> and <code>Err</code> belong to <code>Result</code>.",
+     "bad": "Look at the type of <code>x</code>. Which two shapes can it have?",
+     "lines": [
+      "fn square(x: Option<i64>) -> Option<i64> {",
+      "    match x {",
+      "        __(i) => Some(i * i),",
+      "        None => None,",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", square(Some(8)).unwrap_or(0));",
+      "}"
+     ],
+     "bank": [
+      "Some",
+      "Ok",
+      "Err",
+      "None"
+     ],
+     "answer": [
+      "Some"
+     ]
+    },
+    {
+     "id": "fixit-3",
+     "type": "fill",
+     "prompt": "Pick the fix so the list still prints after the loop.",
+     "good": "Looping over <code>&amp;scores</code> only borrows the list, so it&#x27;s still there for the last line.",
+     "bad": "Looping over <code>scores</code> itself moves the list into the loop. How do you just borrow it?",
+     "lines": [
+      "fn main() {",
+      "    let scores = vec![100, 92, 84];",
+      "    for score in __ {",
+      "        println!(\"{score}\");",
+      "    }",
+      "    println!(\"{:?}\", scores);",
+      "}"
+     ],
+     "bank": [
+      "&scores",
+      "scores",
+      "scores.into_iter()",
+      "*scores"
+     ],
+     "answer": [
+      "&scores"
+     ]
+    },
+    {
+     "id": "fixit-4",
+     "type": "fill",
+     "prompt": "Pick the fix so every score goes up by 10.",
+     "good": "<code>iter_mut</code> hands you a <code>&amp;mut</code> to each number. <code>*score</code> means the number itself, so <code>+= 10</code> changes it.",
+     "bad": "<code>score</code> is a reference, not a number. How do you reach the value behind it?",
+     "lines": [
+      "fn main() {",
+      "    let mut scores = vec![100, 92, 84];",
+      "    for score in scores.iter_mut() {",
+      "        __ += 10;",
+      "    }",
+      "    println!(\"{:?}\", scores);",
+      "}"
+     ],
+     "bank": [
+      "*score",
+      "score",
+      "&score",
+      "mut score"
+     ],
+     "answer": [
+      "*score"
+     ]
+    },
+    {
+     "id": "fixit-5",
+     "type": "fill",
+     "prompt": "Pick the fix so it prints the zodiac animal for 2031.",
+     "good": "Rust only lets you index an array with a <code>usize</code>, so <code>i</code> is turned into one with <code>as usize</code>.",
+     "bad": "Only one number type is allowed inside <code>[ ]</code>. Which one is made for positions?",
+     "lines": [
+      "const ANIMALS: [&str; 12] = [",
+      "    \"monkey\", \"rooster\", \"dog\", \"pig\",",
+      "    \"rat\", \"ox\", \"tiger\", \"rabbit\",",
+      "    \"dragon\", \"snake\", \"horse\", \"goat\",",
+      "];",
+      "",
+      "fn main() {",
+      "    let year: u32 = 2031;",
+      "    let i = year % 12;",
+      "    println!(\"{}\", ANIMALS[i as __]);",
+      "}"
+     ],
+     "bank": [
+      "usize",
+      "u32",
+      "i64",
+      "u8"
+     ],
+     "answer": [
+      "usize"
+     ]
+    },
+    {
+     "id": "fixit-6",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>p1</code> is a parameter without <code>mut</code>, so its fields can&#x27;t change. The fix: <code>fn add(mut p1: Point, ...)</code>.",
+     "bad": "Look for the first line that changes something. Was that thing allowed to change?",
+     "lines": [
+      "struct Point {",
+      "    x: i32,",
+      "    y: i32,",
+      "}",
+      "",
+      "fn add(p1: Point, p2: Point) -> Point {",
+      "    p1.x += p2.x;",
+      "    p1.y += p2.y;",
+      "    p1",
+      "}",
+      "",
+      "fn main() {",
+      "    let p = add(Point { x: 1, y: 3 }, Point { x: 2, y: 4 });",
+      "    println!(\"{} {}\", p.x, p.y);",
+      "}"
+     ],
+     "answer": 6,
+     "rustc": "error[E0594]: cannot assign to `p1.x`, as `p1` is not declared as mutable\n --> src/main.rs:7:5\n  |\n7 |     p1.x += p2.x;\n  |     ^^^^^^^^^^^^ cannot assign\n  |\nhelp: consider changing this to be mutable\n  |\n6 | fn add(mut p1: Point, p2: Point) -> Point {\n  |        +++"
+    },
+    {
+     "id": "fixit-7",
+     "type": "fill",
+     "prompt": "Pick the fix so it prints hello.",
+     "good": "<code>a</code> is an <code>Option</code>, which <code>{}</code> can&#x27;t print. <code>unwrap()</code> takes the String out of the <code>Some</code>.",
+     "bad": "<code>{}</code> can print a String but not an Option. How do you get the String out?",
+     "lines": [
+      "fn main() {",
+      "    let a = Some(String::from(\"hello\"));",
+      "    println!(\"{}\", a.__);",
+      "}"
+     ],
+     "bank": [
+      "unwrap()",
+      "clone()",
+      "to_string()",
+      "len()"
+     ],
+     "answer": [
+      "unwrap()"
+     ]
+    },
+    {
+     "id": "fixit-8",
+     "type": "fill",
+     "prompt": "Pick the fix so it prints the value at position 4.",
+     "good": "<code>get</code> takes a position, and positions are always <code>usize</code>.",
+     "bad": "Same rule as indexing: which number type stands for a position?",
+     "lines": [
+      "fn get(list: &[i32], index: __) -> Option<&i32> {",
+      "    list.get(index)",
+      "}",
+      "",
+      "fn main() {",
+      "    let values = [1, 2, 5, 10, 15];",
+      "    println!(\"{:?}\", get(&values, 4));",
+      "}"
+     ],
+     "bank": [
+      "usize",
+      "i64",
+      "u32",
+      "i32"
+     ],
+     "answer": [
+      "usize"
+     ]
+    },
+    {
+     "id": "fixit-9",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>show</code> only exists for a <code>Pair</code> whose <code>T</code> is <code>Display</code>. <code>Note</code> isn&#x27;t, so <code>q</code> has no <code>show</code>.",
+     "bad": "Look at the <code>impl</code> line: it only covers some kinds of <code>Pair</code>. Which pair isn&#x27;t one of them?",
+     "lines": [
+      "use std::fmt::Display;",
+      "",
+      "struct Pair<T> { a: T, b: T }",
+      "struct Note { n: i32 }",
+      "",
+      "trait Show { fn show(&self); }",
+      "",
+      "impl<T: Display> Show for Pair<T> {",
+      "    fn show(&self) { println!(\"{} {}\", self.a, self.b); }",
+      "}",
+      "",
+      "fn main() {",
+      "    let p = Pair { a: 1, b: 2 };",
+      "    p.show();",
+      "    let q = Pair { a: Note { n: 1 }, b: Note { n: 2 } };",
+      "    q.show();",
+      "}"
+     ],
+     "answer": 15,
+     "rustc": "error[E0599]: the method `show` exists for struct `Pair<Note>`, but its trait bounds were not satisfied\n    --> src/main.rs:16:7\n     |\n   3 | struct Pair<T> { a: T, b: T }\n     | -------------- method `show` not found for this struct because it doesn't satisfy `Pair<Note>: Show`\n   4 | struct Note { n: i32 }\n     | ----------- doesn't satisfy `Note: std::fmt::Display`\n...\n  16 |     q.show();\n     |       ^^^^ method cannot be called on `Pair<Note>` due to unsatisfied trait bounds\n     |\nnote: trait bound `Note: std::fmt::Display` was not satisfied\n    --> src/main.rs:8:9\n     |\n   8 | impl<T: Display> Show for Pair<T> {\n     |         ^^^^^^^  ----     -------\n     |         |\n     |         unsatisfied trait bound introduced here\nnote: the trait `std::fmt::Display` must be implemented\n    --> /rustc/library/core/src/fmt/mod.rs:1187:1\n     |\n1187 | pub trait Display: PointeeSized {\n     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n     = help: items from traits can only be used if the trait is implemented and in scope\nnote: `Show` defines an item `show`, perhaps you need to implement it\n    --> src/main.rs:6:1\n     |\n   6 | trait Show { fn show(&self); }\n     | ^^^^^^^^^^"
+    },
+    {
+     "id": "fixit-10",
+     "type": "fill",
+     "prompt": "Pick the fix so pop can change the list.",
+     "good": "<code>pop</code> changes the list, so <code>b</code> needs a mutable borrow: <code>&amp;mut a</code>.",
+     "bad": "A plain <code>&amp;</code> borrow can only look. <code>pop</code> needs to change the list.",
+     "lines": [
+      "fn main() {",
+      "    let mut a = vec![3, 2, 1];",
+      "    a.push(4);",
+      "    let b = __;",
+      "    println!(\"{:?}\", b.pop());",
+      "}"
+     ],
+     "bank": [
+      "&mut a",
+      "&a",
+      "&a[0]",
+      "*a"
+     ],
+     "answer": [
+      "&mut a"
+     ]
+    },
+    {
+     "id": "fixit-11",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "A struct holding a borrow has to say how long it lives: <code>struct Person&lt;&#x27;a&gt; { name: &amp;&#x27;a str }</code>.",
+     "bad": "<code>main</code> is fine. Which line holds a borrow without a lifetime?",
+     "lines": [
+      "#[derive(Debug)]",
+      "struct Person {",
+      "    name: &str,",
+      "}",
+      "",
+      "fn main() {",
+      "    let p = Person { name: \"Mia\" };",
+      "    println!(\"{:?}\", p);",
+      "}"
+     ],
+     "answer": 2,
+     "rustc": "error[E0106]: missing lifetime specifier\n --> src/main.rs:3:11\n  |\n3 |     name: &str,\n  |           ^ expected named lifetime parameter\n  |\nhelp: consider introducing a named lifetime parameter\n  |\n2 ~ struct Person<'a> {\n3 ~     name: &'a str,\n  |"
+    },
+    {
+     "id": "fixit-12",
+     "type": "fill",
+     "prompt": "Pick the fix so the struct can hold a borrowed name.",
+     "good": "The struct declares <code>&#x27;a</code>, and the field uses it: <code>&amp;&#x27;a str</code>.",
+     "bad": "Use the lifetime the struct already names in <code>&lt;&#x27; &#x27;&gt;</code>.",
+     "lines": [
+      "struct Person<'a> {",
+      "    name: &__ str,",
+      "}",
+      "",
+      "impl<'a> Person<'a> {",
+      "    fn name(&self) -> &str {",
+      "        self.name",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    let p = Person { name: \"Mia\" };",
+      "    println!(\"{}\", p.name());",
+      "}"
+     ],
+     "bank": [
+      "'a",
+      "'b",
+      "'_",
+      "mut"
+     ],
+     "answer": [
+      "'a"
+     ]
+    },
+    {
+     "id": "fixit-13",
+     "type": "fill",
+     "prompt": "Pick the fix so the function can return text.",
+     "good": "Text in quotes lives for the whole program. That lifetime is called <code>&#x27;static</code>.",
+     "bad": "There&#x27;s no input to borrow from. How long does text in quotes live?",
+     "lines": [
+      "fn hello() -> &__ str {",
+      "    \"hello world\"",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", hello());",
+      "}"
+     ],
+     "bank": [
+      "'static",
+      "'a",
+      "'_",
+      "mut"
+     ],
+     "answer": [
+      "'static"
+     ]
+    },
+    {
+     "id": "fixit-14",
+     "type": "fill",
+     "prompt": "Pick the fix so say() works for any car.",
+     "good": "The struct only allows a <code>T</code> that is a <code>Car</code>, so the <code>impl</code> must promise the same: <code>impl&lt;T: Car&gt;</code>.",
+     "bad": "Compare with the <code>struct Owner</code> line. What does it require of <code>T</code>?",
+     "lines": [
+      "trait Car { fn speed(&self) -> i32; }",
+      "",
+      "struct Van { speed: i32 }",
+      "",
+      "impl Car for Van {",
+      "    fn speed(&self) -> i32 { self.speed }",
+      "}",
+      "",
+      "struct Owner<T: Car> { car: T }",
+      "",
+      "impl__ Owner<T> {",
+      "    fn say(&self) { println!(\"{}\", self.car.speed()); }",
+      "}",
+      "",
+      "fn main() {",
+      "    let o = Owner { car: Van { speed: 100 } };",
+      "    o.say();",
+      "}"
+     ],
+     "bank": [
+      "<T: Car>",
+      "<T>",
+      "<Van>",
+      "<Car>"
+     ],
+     "answer": [
+      "<T: Car>"
+     ]
+    },
+    {
+     "id": "fixit-15",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "Two type parameters can&#x27;t share a name. Call them <code>&lt;T, U&gt;</code>, and give <code>b</code> the type <code>U</code>.",
+     "bad": "Look at the names inside <code>&lt; &gt;</code>.",
+     "lines": [
+      "struct Pair<T, T> {",
+      "    a: T,",
+      "    b: T,",
+      "}",
+      "",
+      "fn main() {",
+      "    let x = Pair { a: 1, b: \"two\" };",
+      "    println!(\"{} {}\", x.a, x.b);",
+      "}"
+     ],
+     "answer": 0,
+     "rustc": "error[E0403]: the name `T` is already used for a generic parameter in this item's generic parameters\n --> src/main.rs:1:16\n  |\n1 | struct Pair<T, T> {\n  |             -  ^ already used\n  |             |\n  |             first use of `T`"
+    },
+    {
+     "id": "fixit-16",
+     "type": "fill",
+     "prompt": "Pick the fix so a and b can be different types.",
+     "good": "<code>a</code> is a number and <code>b</code> is text, so they need different type parameters: <code>T</code> and <code>U</code>.",
+     "bad": "<code>b</code> holds text in quotes. Which type covers it without forcing it to match <code>a</code>?",
+     "lines": [
+      "struct Pair<T, U> {",
+      "    a: T,",
+      "    b: __,",
+      "}",
+      "",
+      "fn main() {",
+      "    let x = Pair { a: 1, b: \"two\" };",
+      "    println!(\"{} {}\", x.a, x.b);",
+      "}"
+     ],
+     "bank": [
+      "U",
+      "T",
+      "i32",
+      "String"
+     ],
+     "answer": [
+      "U"
+     ]
+    },
+    {
+     "id": "fixit-17",
+     "type": "fill",
+     "prompt": "Pick the fix so speed_of takes any car.",
+     "good": "<code>speed_of</code> calls <code>.speed()</code>, which only a <code>Car</code> has. <code>T: Car</code> promises it.",
+     "bad": "Which trait gives <code>c</code> the <code>speed</code> method?",
+     "lines": [
+      "trait Car { fn speed(&self) -> i32; }",
+      "",
+      "struct Bike { speed: i32 }",
+      "",
+      "impl Car for Bike {",
+      "    fn speed(&self) -> i32 { self.speed }",
+      "}",
+      "",
+      "fn speed_of<T: __>(c: T) -> i32 {",
+      "    c.speed()",
+      "}",
+      "",
+      "fn main() {",
+      "    println!(\"{}\", speed_of(Bike { speed: 30 }));",
+      "}"
+     ],
+     "bank": [
+      "Car",
+      "Display",
+      "Clone",
+      "Copy"
+     ],
+     "answer": [
+      "Car"
+     ]
+    },
+    {
+     "id": "fixit-18",
+     "type": "fill",
+     "prompt": "Pick the fix so main can call hello.",
+     "good": "Things inside a <code>mod</code> are private. <code>pub</code> lets code outside call them.",
+     "bad": "<code>hello</code> lives inside a module. What lets code outside that module use it?",
+     "lines": [
+      "mod greet {",
+      "    __ fn hello() {",
+      "        println!(\"hello\");",
+      "    }",
+      "}",
+      "",
+      "fn main() {",
+      "    greet::hello();",
+      "}"
+     ],
+     "bank": [
+      "pub",
+      "use",
+      "mod",
+      "mut"
+     ],
+     "answer": [
+      "pub"
+     ]
+    },
+    {
+     "id": "fixit-19",
+     "type": "fill",
+     "prompt": "Pick the fix so the sword can keep its name.",
+     "good": "A bare <code>str</code> has no fixed size, so a struct can&#x27;t hold it. A borrow can: <code>&amp;&#x27;a str</code>, using the struct&#x27;s lifetime.",
+     "bad": "The struct names a lifetime <code>&#x27;a</code>. Which type is a borrow that uses it?",
+     "lines": [
+      "struct Sword<'a> {",
+      "    name: __,",
+      "    damage: i32,",
+      "}",
+      "",
+      "fn main() {",
+      "    let s = Sword { name: \"Night Blade\", damage: 10 };",
+      "    println!(\"{} hits for {}\", s.name, s.damage);",
+      "}"
+     ],
+     "bank": [
+      "&'a str",
+      "str",
+      "&str",
+      "String"
+     ],
+     "answer": [
+      "&'a str"
+     ]
+    },
+    {
+     "id": "fixit-20",
+     "type": "error",
+     "prompt": "Which line does the compiler reject?",
+     "good": "<code>m</code> is a plain <code>&amp;</code> borrow, so it can&#x27;t change the map. It needs <code>&amp;mut HashMap&lt;...&gt;</code>, and <code>main</code> needs <code>let mut map</code> and <code>add(&amp;mut map)</code>.",
+     "bad": "Which line tries to change something it only borrowed to look at?",
+     "lines": [
+      "use std::collections::HashMap;",
+      "",
+      "fn add(m: &HashMap<String, String>) {",
+      "    m.insert(String::from(\"color\"), String::from(\"red\"));",
+      "}",
+      "",
+      "fn main() {",
+      "    let map = HashMap::new();",
+      "    add(&map);",
+      "    println!(\"{:?}\", map);",
+      "}"
+     ],
+     "answer": 3,
+     "rustc": "error[E0596]: cannot borrow `*m` as mutable, as it is behind a `&` reference\n --> src/main.rs:4:5\n  |\n4 |     m.insert(String::from(\"color\"), String::from(\"red\"));\n  |     ^ `m` is a `&` reference, so it cannot be borrowed as mutable\n  |\nhelp: consider changing this to be a mutable reference\n  |\n3 | fn add(m: &mut HashMap<String, String>) {\n  |            +++"
+    }
+   ]
   }
  ]
 }

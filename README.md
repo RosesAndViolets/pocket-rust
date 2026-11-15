@@ -60,6 +60,11 @@ GitHub repo, a file path and a fine-grained token that can only read and write t
 contents. The app reads the file, merges it with local progress, and writes it back. When
 you're offline it waits until you're back online.
 
+## Credits
+
+Lesson 16, "Fix the compiler", adapts puzzles from Akira Nishikawa's Rust Compile Challenge
+(MIT license, © 2021 Akira Nishikawa): translated, shortened, and turned into tap-to-answer problems.
+
 ## Running it locally
 
 ```sh
