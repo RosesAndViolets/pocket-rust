@@ -25,6 +25,12 @@ CACHE_FILE = HERE / ".rustc-cache.json"
 OUT = HERE.parent / "course.json"
 cache = json.loads(CACHE_FILE.read_text()) if CACHE_FILE.exists() else {}
 problems_found = []
+# Rust's own library paths show up in some errors. Rename them so course.json never holds this
+# machine's home folder (username) — it's public on GitHub.
+SYSROOT = subprocess.run(["rustc", "--print", "sysroot"], capture_output=True, text=True).stdout.strip()
+# rustc applies the LAST matching rule, so the broad home rule goes first.
+REMAP = ["--remap-path-prefix", f"{Path.home()}=~",
+         "--remap-path-prefix", f"{SYSROOT}/lib/rustlib/src/rust=/rustc"]
 
 
 def lines_of(code):
@@ -39,14 +45,14 @@ def program(lines, wrap):
 
 def compile_run(src):
     """-> {ok, stdout, diags:[{level, code, lines, rendered}]} (cached by source hash)."""
-    key = hashlib.sha1(src.encode()).hexdigest()
+    key = hashlib.sha1(("remap2\n" + src).encode()).hexdigest()  # salt: skip entries cached before REMAP
     if key in cache:
         return cache[key]
     with tempfile.TemporaryDirectory() as d:
         path = Path(d) / "main.rs"
         path.write_text(src)
         p = subprocess.run(["rustc", "--edition", "2021", "-A", "warnings", "--error-format=json",
-                            "--color", "never", "-o", str(Path(d) / "bin"), str(path)],
+                            "--color", "never", *REMAP, "-o", str(Path(d) / "bin"), str(path)],
                            capture_output=True, text=True, cwd=d)
         diags = []
         for raw in p.stderr.splitlines():
@@ -232,7 +238,10 @@ def main():
         print("\n\n".join(problems_found))
         sys.exit(1)
     rustc = subprocess.run(["rustc", "--version"], capture_output=True, text=True).stdout.split(" (")[0].strip()
-    OUT.write_text(json.dumps({"version": 1, "rustc": rustc, "lessons": built}, ensure_ascii=False, indent=1))
+    text = json.dumps({"version": 1, "rustc": rustc, "lessons": built}, ensure_ascii=False, indent=1)
+    if str(Path.home()) in text:  # course.json is public: never ship this machine's home path
+        sys.exit(f"Refusing to write {OUT.name}: it contains {Path.home()}.")
+    OUT.write_text(text)
     total = sum(len(l["problems"]) for l in built)
     print(f"OK: {len(built)} lessons, {total} problems, all checked by rustc. Wrote {OUT.name}.")
 

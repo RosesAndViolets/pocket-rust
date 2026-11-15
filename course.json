@@ -1,6 +1,6 @@
 {
  "version": 1,
- "rustc": "rustc 1.97.0",
+ "rustc": "rustc 1.99.1",
  "lessons": [
   {
    "id": "variables",
@@ -260,7 +260,7 @@
       "}"
      ],
      "answer": 3,
-     "rustc": "error[E0277]: cannot add `f64` to `i32`\n --> src/main.rs:4:24\n  |\n4 |     let total = apples + weight;\n  |                        ^ no implementation for `i32 + f64`\n  |\n  = help: the trait `Add<f64>` is not implemented for `i32`\nhelp: the following other types implement trait `Add<Rhs>`\n --> /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/ops/arith.rs:98:8\n  |\n  = note: `i32` implements `Add`\n ::: /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/ops/arith.rs:113:0\n  |\n  = note: in this macro invocation\n --> /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/internal_macros.rs:22:8\n  |\n  = note: `&i32` implements `Add<i32>`\n ::: /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/internal_macros.rs:33:8\n  |\n  = note: `i32` implements `Add<&i32>`\n ::: /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/internal_macros.rs:44:8\n  |\n  = note: `&i32` implements `Add`\n  = note: this error originates in the macro `add_impl` (in Nightly builds, run with -Z macro-backtrace for more info)"
+     "rustc": "error[E0277]: cannot add `f64` to `i32`\n   --> src/main.rs:4:24\n    |\n  4 |     let total = apples + weight;\n    |                        ^ no implementation for `i32 + f64`\n    |\n    = help: the trait `Add<f64>` is not implemented for `i32`\nhelp: the following other types implement trait `Add<Rhs>`\n   --> /rustc/library/core/src/ops/arith.rs:98:9\n    |\n 98 |         const impl Add for $t {\n    |         ^^^^^^^^^^^^^^^^^^^^^ `i32` implements `Add`\n...\n113 | add_impl! { usize u8 u16 u32 u64 u128 isize i8 i16 i32 i64 i128 f16 f32 f64 f128 }\n    | ---------------------------------------------------------------------------------- in this macro invocation\n    |\n   ::: /rustc/library/core/src/internal_macros.rs:22:9\n    |\n 22 |         const impl $imp<$u> for &$t {\n    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&i32` implements `Add<i32>`\n...\n 33 |         const impl $imp<&$u> for $t {\n    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `i32` implements `Add<&i32>`\n...\n 44 |         const impl $imp<&$u> for &$t {\n    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&i32` implements `Add`\n    = note: this error originates in the macro `add_impl` (in Nightly builds, run with -Z macro-backtrace for more info)"
     },
     {
      "id": "types-3",
@@ -1754,7 +1754,7 @@
       "}"
      ],
      "answer": 5,
-     "rustc": "error[E0382]: borrow of moved value: `nums`\n --> src/main.rs:6:20\n  |\n2 |     let nums = vec![1, 2, 3];\n  |         ---- move occurs because `nums` has type `Vec<i32>`, which does not implement the `Copy` trait\n3 |     for n in nums {\n  |              ---- `nums` moved due to this implicit call to `.into_iter()`\n...\n6 |     println!(\"{}\", nums.len());\n  |                    ^^^^ value borrowed here after move\n  |\nnote: `into_iter` takes ownership of the receiver `self`, which moves `nums`\n --> /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/iter/traits/collect.rs:312:17\nhelp: consider iterating over a slice of the `Vec<i32>`'s content to avoid moving into the `for` loop\n  |\n3 |     for n in &nums {\n  |              +"
+     "rustc": "error[E0382]: borrow of moved value: `nums`\n   --> src/main.rs:6:20\n    |\n  2 |     let nums = vec![1, 2, 3];\n    |         ---- move occurs because `nums` has type `Vec<i32>`, which does not implement the `Copy` trait\n  3 |     for n in nums {\n    |              ---- `nums` moved due to this implicit call to `.into_iter()`\n...\n  6 |     println!(\"{}\", nums.len());\n    |                    ^^^^ value borrowed here after move\n    |\nnote: the `for` loop is desugared into a call to `std::iter::IntoIterator::into_iter`, which takes ownership of the receiver `self`, which moves `nums`\n   --> /rustc/library/core/src/iter/traits/collect.rs:312:18\n    |\n312 |     fn into_iter(self) -> Self::IntoIter;\n    |                  ^^^^\nhelp: consider iterating over a slice of the `Vec<i32>`'s content to avoid moving into the `for` loop\n    |\n  3 |     for n in &nums {\n    |              +"
     },
     {
      "id": "lists-4",
@@ -2230,7 +2230,7 @@
       "}"
      ],
      "answer": 3,
-     "rustc": "error[E0369]: cannot multiply `Option<&{integer}>` by `{integer}`\n --> src/main.rs:4:25\n  |\n4 |     let doubled = first * 2;\n  |                   ----- ^ - {integer}\n  |                   |\n  |                   Option<&{integer}>\n  |\nnote: `Option<&{integer}>` does not implement `Mul<{integer}>`\n --> /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/option.rs:597:0\n  |\n  = note: `Option<&{integer}>` is defined in another crate"
+     "rustc": "error[E0369]: cannot multiply `Option<&{integer}>` by `{integer}`\n   --> src/main.rs:4:25\n    |\n  4 |     let doubled = first * 2;\n    |                   ----- ^ - {integer}\n    |                   |\n    |                   Option<&{integer}>\n    |\nnote: `Option<&{integer}>` does not implement `Mul<{integer}>`\n   --> /rustc/library/core/src/option.rs:598:1\n    |\n598 | pub enum Option<T> {\n    | ^^^^^^^^^^^^^^^^^^ `Option<&{integer}>` is defined in another crate"
     },
     {
      "id": "errors-4",
@@ -2940,7 +2940,7 @@
       "}"
      ],
      "answer": 7,
-     "rustc": "error[E0277]: `Point` doesn't implement `Debug`\n --> src/main.rs:8:22\n  |\n8 |     println!(\"{:?}\", p);\n  |               ----   ^ `Point` cannot be formatted using `{:?}` because it doesn't implement `Debug`\n  |               |\n  |               required by this formatting parameter\n  |\n  = help: the trait `Debug` is not implemented for `Point`\n  = note: add `#[derive(Debug)]` to `Point` or manually `impl Debug for Point`\nhelp: consider annotating `Point` with `#[derive(Debug)]`\n  |\n1 + #[derive(Debug)]\n2 | struct Point {\n  |"
+     "rustc": "error[E0277]: `Point` doesn't implement `Debug`\n --> src/main.rs:8:22\n  |\n8 |     println!(\"{:?}\", p);\n  |               ----   ^ `Point` cannot be formatted using `{:?}` because it doesn't implement `Debug`\n  |               |\n  |               required by this formatting parameter\n  |\n  = help: the trait `Debug` is not implemented for `Point`\nhelp: consider annotating `Point` with `#[derive(Debug)]`\n  |\n1 + #[derive(Debug)]\n2 | struct Point {\n  |"
     },
     {
      "id": "modules-5",
