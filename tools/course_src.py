@@ -1,11 +1,20 @@
 """The course, as written. `build.py` checks every problem with rustc and writes `course.json`.
 
 Text fields take `backticks` for inline code. Code is a triple-quoted string.
+Each lesson has `part`: 1 (Basics), 2 (Real programs, by area), 3 (Review and fix).
+Cards made with `card` compile alone. `real(h, p, code, repo, tag, path, lines, license,
+note=None)` shows a credited excerpt without compiling it. Use a real tag or full commit,
+a 1-based (start, end) range of at most 25 lines, and a license. For private owner code,
+use `repo=None, own=True` (no link, labelled "your code").
 Problem types:
   fill   - `__` marks each gap; `answer` fills them in order; wrong bank options must not work.
   error  - a whole program; `line` (1-based) is the line the compiler rejects; `code` is its error code.
   output - `answer` is what the program prints, one entry per line; ["won't compile"] if it doesn't.
   order  - `pool` lines in the right order; the build finds every other order that also works.
+  smell  - working code; clippy must report only `lint`, with a primary span on `line`.
+           `fixed` must be warning-free and print the same output.
+  better - versions `a` and `b` print the same; `answer` is "a" or "b". `lint` must occur
+           only in the worse version. `lint=None` is an author judgement, labelled in the app.
 `wrap=True` puts the code inside `fn main() { }` when it's compiled (the learner sees it unwrapped).
 """
 
@@ -14,6 +23,21 @@ WONT = "won't compile"
 
 def card(h, p, code, note=None):
     return {"h": h, "p": p, "code": code, "note": note}
+
+
+def real(h, p, code, repo, tag, path, lines, license, note=None, *, own=False):
+    return dict(type="real", h=h, p=p, code=code, repo=repo, tag=tag, path=path,
+                lines=lines, license=license, note=note, own=own)
+
+
+def smell(prompt, code, line, lint, fixed, good, bad, wrap=False):
+    return dict(type="smell", prompt=prompt, code=code, line=line, lint=lint,
+                fixed=fixed, good=good, bad=bad, wrap=wrap)
+
+
+def better(prompt, a, b, answer, lint, good, bad, wrap=False):
+    return dict(type="better", prompt=prompt, a=a, b=b, answer=answer, lint=lint,
+                good=good, bad=bad, wrap=wrap)
 
 
 def fill(prompt, code, bank, answer, good, bad, output=None, wrap=True):
@@ -40,7 +64,7 @@ COURSE = []
 
 # ─────────────────────────────── 1 ───────────────────────────────
 COURSE.append({
-    "id": "variables", "title": "Variables",
+    "part": 1, "id": "variables", "title": "Variables",
     "summary": "Your first program: `let`, `mut` and printing.",
     "cards": [
         card("Every program starts at main",
@@ -114,7 +138,7 @@ println!("{y}");''', ["0", "2", "10", "12"], ["2", "12"],
 
 # ─────────────────────────────── 2 ───────────────────────────────
 COURSE.append({
-    "id": "types", "title": "Numbers and types",
+    "part": 1, "id": "types", "title": "Numbers and types",
     "summary": "Whole numbers, decimals, true/false, and why Rust cares.",
     "cards": [
         card("Every value has a type",
@@ -190,7 +214,7 @@ println!("{x}");''', ["5", "6", "10", "11"], ["11"],
 
 # ─────────────────────────────── 3 ───────────────────────────────
 COURSE.append({
-    "id": "functions", "title": "Functions",
+    "part": 1, "id": "functions", "title": "Functions",
     "summary": "Write your own functions and return values from them.",
     "cards": [
         card("Make your own function",
@@ -300,7 +324,7 @@ fn main() {
 
 # ─────────────────────────────── 4 ───────────────────────────────
 COURSE.append({
-    "id": "control", "title": "Decisions and loops",
+    "part": 1, "id": "control", "title": "Decisions and loops",
     "summary": "`if`, `loop`, `while` and `for`.",
     "cards": [
         card("if chooses a path",
@@ -394,7 +418,7 @@ println!("{count}");''', ["4", "5", "6", "8"], ["6"],
 
 # ─────────────────────────────── 5 ───────────────────────────────
 COURSE.append({
-    "id": "text", "title": "Text",
+    "part": 1, "id": "text", "title": "Text",
     "summary": "`String` and `&str`, and how to grow text.",
     "cards": [
         card("Two kinds of text",
@@ -459,7 +483,7 @@ println!("{s}");''', ["2", "4", "ab", "abcd"], ["4", "abcd"],
 
 # ─────────────────────────────── 6 ───────────────────────────────
 COURSE.append({
-    "id": "ownership", "title": "Ownership",
+    "part": 1, "id": "ownership", "title": "Ownership",
     "summary": "Why each value has exactly one owner.",
     "cards": [
         card("One owner at a time",
@@ -546,7 +570,7 @@ println!("{x}");''', ["1", "2"], ["2", "1"],
 
 # ─────────────────────────────── 7 ───────────────────────────────
 COURSE.append({
-    "id": "borrowing", "title": "Borrowing",
+    "part": 1, "id": "borrowing", "title": "Borrowing",
     "summary": "Use a value without taking it: `&` and `&mut`.",
     "cards": [
         card("Borrow instead of taking",
@@ -661,7 +685,7 @@ println!("{r}");''', ["hi", "hi!", WONT], [WONT],
 
 # ─────────────────────────────── 8 ───────────────────────────────
 COURSE.append({
-    "id": "structs", "title": "Structs and methods",
+    "part": 1, "id": "structs", "title": "Structs and methods",
     "summary": "Your own types, and what `Type::new()` means.",
     "cards": [
         card("Group data with struct",
@@ -818,7 +842,7 @@ fn main() {
 
 # ─────────────────────────────── 9 ───────────────────────────────
 COURSE.append({
-    "id": "lists", "title": "Lists",
+    "part": 1, "id": "lists", "title": "Lists",
     "summary": "`Vec`: a list that grows, and `Vec::new()`.",
     "cards": [
         card("Vec holds a list",
@@ -897,7 +921,7 @@ println!("{}", v[v.len() - 1]);''', ["1", "2", "3", WONT], ["3"],
 
 # ─────────────────────────────── 10 ───────────────────────────────
 COURSE.append({
-    "id": "enums", "title": "Enums and match",
+    "part": 1, "id": "enums", "title": "Enums and match",
     "summary": "A value that's one of several choices, and handling each one.",
     "cards": [
         card("enum: one of several choices",
@@ -1040,7 +1064,7 @@ fn main() {
 
 # ─────────────────────────────── 11 ───────────────────────────────
 COURSE.append({
-    "id": "errors", "title": "Missing values and errors",
+    "part": 1, "id": "errors", "title": "Missing values and errors",
     "summary": "`Option`, `Result` and the `?` operator.",
     "cards": [
         card("Option: maybe a value",
@@ -1180,7 +1204,7 @@ fn main() {
 
 # ─────────────────────────────── 12 ───────────────────────────────
 COURSE.append({
-    "id": "traits", "title": "Traits and iterators",
+    "part": 1, "id": "traits", "title": "Traits and iterators",
     "summary": "Shared behaviour, tiny inline functions, and chains.",
     "cards": [
         card("Traits: a promise of methods",
@@ -1293,7 +1317,7 @@ match nums.iter().__() {
 
 # ─────────────────────────────── 13 ───────────────────────────────
 COURSE.append({
-    "id": "generics", "title": "Generics and lifetimes",
+    "part": 1, "id": "generics", "title": "Generics and lifetimes",
     "summary": "One function for many types, and how long a borrow lasts.",
     "cards": [
         card("One function, many types",
@@ -1417,7 +1441,7 @@ fn main() {
 
 # ─────────────────────────────── 14 ───────────────────────────────
 COURSE.append({
-    "id": "modules", "title": "Modules, use and derive",
+    "part": 1, "id": "modules", "title": "Modules, use and derive",
     "summary": "The lines at the top of every real Rust file.",
     "cards": [
         card("use brings names in",
@@ -1536,7 +1560,7 @@ fn main() {
 
 # ─────────────────────────────── 15 ───────────────────────────────
 COURSE.append({
-    "id": "hashmaps", "title": "Maps",
+    "part": 1, "id": "hashmaps", "title": "Maps",
     "summary": "`HashMap`: look values up by a key.",
     "cards": [
         card("HashMap: look things up by key",
@@ -1658,7 +1682,7 @@ fn main() {
 # ─────────────────────────────── 16 ───────────────────────────────
 # Adapted from Akira Nishikawa's Rust Compile Challenge (MIT license). See README, Credits.
 COURSE.append({
-    "id": "fixit", "title": "Fix the compiler",
+    "part": 1, "id": "fixit", "title": "Fix the compiler",
     "summary": "Real puzzles: programs the compiler rejects, and the one change that fixes each.",
     "cards": [
         card("Every problem here is broken",
@@ -1953,6 +1977,48 @@ fn main() {
 }''', 4, "E0596",
             "`m` is a plain `&` borrow, so it can't change the map. It needs `&mut HashMap<...>`, and `main` needs `let mut map` and `add(&mut map)`.",
             "Which line tries to change something it only borrowed to look at?"),
+    ],
+})
+
+# R1 sample: later content jobs insert lessons before this review lesson.
+_SMELLY = '''
+fn first(values: &Vec<i32>) -> i32 {
+    values[0]
+}
+
+fn main() {
+    let values = vec![7, 8];
+    println!("{}", first(&values));
+}'''
+_FIXED = _SMELLY.replace("&Vec<i32>", "&[i32]")
+COURSE.append({
+    "part": 3, "id": "smells", "title": "Clippy's top smells",
+    "summary": "Working code can still ask for too much. Let Clippy help.",
+    "cards": [
+        card("Compiles is a start",
+             "Rust checks that code is safe to run. Clippy looks for ways to make it clearer. A warning is a clue to read the code, not a command to change it.",
+             _FIXED,
+             "`&[i32]` is a slice: a borrowed view of some numbers. It works with a vector or an array."),
+        real("Real code borrows slices",
+             "Rayon runs work in parallel. Here its slice method borrows a slice. It does not ask callers to own a vector.",
+             '''impl<T: Sync> ParallelSlice<T> for [T] {
+    #[inline]
+    fn as_parallel_slice(&self) -> &[T] {
+        self
+    }
+}''',
+             "rayon-rs/rayon", "v1.10.0", "src/slice/mod.rs", (203, 208), "MIT",
+             "`Sync` is a promise about sharing data between threads. This excerpt is for reading; it needs Rayon's crate to compile."),
+    ],
+    "problems": [
+        smell("Which line asks for a vector when a slice would do?", _SMELLY,
+              1, "clippy::ptr_arg", _FIXED,
+              "`&[i32]` accepts a borrowed view. This function only reads a number; it needs no vector methods.",
+              "Look at the parameter type. Does it need a whole vector?"),
+        better("Which version accepts both vectors and arrays?", _SMELLY, _FIXED,
+               "b", "clippy::ptr_arg",
+               "B takes a slice. Both print 7, but B works with more callers.",
+               "Both run. Look for the parameter that asks for less."),
     ],
 })
 

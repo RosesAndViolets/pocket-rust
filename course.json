@@ -4,6 +4,7 @@
  "lessons": [
   {
    "id": "variables",
+   "part": 1,
    "n": 1,
    "title": "Variables",
    "summary": "Your first program: <code>let</code>, <code>mut</code> and printing.",
@@ -178,6 +179,7 @@
   },
   {
    "id": "types",
+   "part": 1,
    "n": 2,
    "title": "Numbers and types",
    "summary": "Whole numbers, decimals, true/false, and why Rust cares.",
@@ -363,6 +365,7 @@
   },
   {
    "id": "functions",
+   "part": 1,
    "n": 3,
    "title": "Functions",
    "summary": "Write your own functions and return values from them.",
@@ -588,6 +591,7 @@
   },
   {
    "id": "control",
+   "part": 1,
    "n": 4,
    "title": "Decisions and loops",
    "summary": "<code>if</code>, <code>loop</code>, <code>while</code> and <code>for</code>.",
@@ -806,6 +810,7 @@
   },
   {
    "id": "text",
+   "part": 1,
    "n": 5,
    "title": "Text",
    "summary": "<code>String</code> and <code>&amp;str</code>, and how to grow text.",
@@ -972,6 +977,7 @@
   },
   {
    "id": "ownership",
+   "part": 1,
    "n": 6,
    "title": "Ownership",
    "summary": "Why each value has exactly one owner.",
@@ -1155,6 +1161,7 @@
   },
   {
    "id": "borrowing",
+   "part": 1,
    "n": 7,
    "title": "Borrowing",
    "summary": "Use a value without taking it: <code>&amp;</code> and <code>&amp;mut</code>.",
@@ -1378,6 +1385,7 @@
   },
   {
    "id": "structs",
+   "part": 1,
    "n": 8,
    "title": "Structs and methods",
    "summary": "Your own types, and what <code>Type::new()</code> means.",
@@ -1645,6 +1653,7 @@
   },
   {
    "id": "lists",
+   "part": 1,
    "n": 9,
    "title": "Lists",
    "summary": "<code>Vec</code>: a list that grows, and <code>Vec::new()</code>.",
@@ -1833,6 +1842,7 @@
   },
   {
    "id": "enums",
+   "part": 1,
    "n": 10,
    "title": "Enums and match",
    "summary": "A value that&#x27;s one of several choices, and handling each one.",
@@ -2093,6 +2103,7 @@
   },
   {
    "id": "errors",
+   "part": 1,
    "n": 11,
    "title": "Missing values and errors",
    "summary": "<code>Option</code>, <code>Result</code> and the <code>?</code> operator.",
@@ -2345,6 +2356,7 @@
   },
   {
    "id": "traits",
+   "part": 1,
    "n": 12,
    "title": "Traits and iterators",
    "summary": "Shared behaviour, tiny inline functions, and chains.",
@@ -2576,6 +2588,7 @@
   },
   {
    "id": "generics",
+   "part": 1,
    "n": 13,
    "title": "Generics and lifetimes",
    "summary": "One function for many types, and how long a borrow lasts.",
@@ -2788,6 +2801,7 @@
   },
   {
    "id": "modules",
+   "part": 1,
    "n": 14,
    "title": "Modules, use and derive",
    "summary": "The lines at the top of every real Rust file.",
@@ -3006,6 +3020,7 @@
   },
   {
    "id": "hashmaps",
+   "part": 1,
    "n": 15,
    "title": "Maps",
    "summary": "<code>HashMap</code>: look values up by a key.",
@@ -3236,6 +3251,7 @@
   },
   {
    "id": "fixit",
+   "part": 1,
    "n": 16,
    "title": "Fix the compiler",
    "summary": "Real puzzles: programs the compiler rejects, and the one change that fixes each.",
@@ -3788,6 +3804,104 @@
      ],
      "answer": 3,
      "rustc": "error[E0596]: cannot borrow `*m` as mutable, as it is behind a `&` reference\n --> src/main.rs:4:5\n  |\n4 |     m.insert(String::from(\"color\"), String::from(\"red\"));\n  |     ^ `m` is a `&` reference, so it cannot be borrowed as mutable\n  |\nhelp: consider changing this to be a mutable reference\n  |\n3 | fn add(m: &mut HashMap<String, String>) {\n  |            +++"
+    }
+   ]
+  },
+  {
+   "id": "smells",
+   "part": 3,
+   "n": 17,
+   "title": "Clippy's top smells",
+   "summary": "Working code can still ask for too much. Let Clippy help.",
+   "cards": [
+    {
+     "h": "Compiles is a start",
+     "p": "Rust checks that code is safe to run. Clippy looks for ways to make it clearer. A warning is a clue to read the code, not a command to change it.",
+     "code": [
+      "fn first(values: &[i32]) -> i32 {",
+      "    values[0]",
+      "}",
+      "",
+      "fn main() {",
+      "    let values = vec![7, 8];",
+      "    println!(\"{}\", first(&values));",
+      "}"
+     ],
+     "note": "<code>&amp;[i32]</code> is a slice: a borrowed view of some numbers. It works with a vector or an array."
+    },
+    {
+     "type": "real",
+     "h": "Real code borrows slices",
+     "p": "Rayon runs work in parallel. Here its slice method borrows a slice. It does not ask callers to own a vector.",
+     "code": [
+      "impl<T: Sync> ParallelSlice<T> for [T] {",
+      "    #[inline]",
+      "    fn as_parallel_slice(&self) -> &[T] {",
+      "        self",
+      "    }",
+      "}"
+     ],
+     "repo": "rayon-rs/rayon",
+     "tag": "v1.10.0",
+     "path": "src/slice/mod.rs",
+     "lines": [
+      203,
+      208
+     ],
+     "license": "MIT",
+     "note": "<code>Sync</code> is a promise about sharing data between threads. This excerpt is for reading; it needs Rayon&#x27;s crate to compile.",
+     "own": false,
+     "link": "https://github.com/rayon-rs/rayon/blob/v1.10.0/src/slice/mod.rs#L203-L208"
+    }
+   ],
+   "problems": [
+    {
+     "id": "smells-1",
+     "type": "smell",
+     "prompt": "Which line asks for a vector when a slice would do?",
+     "good": "<code>&amp;[i32]</code> accepts a borrowed view. This function only reads a number; it needs no vector methods.",
+     "bad": "Look at the parameter type. Does it need a whole vector?",
+     "lines": [
+      "fn first(values: &Vec<i32>) -> i32 {",
+      "    values[0]",
+      "}",
+      "",
+      "fn main() {",
+      "    let values = vec![7, 8];",
+      "    println!(\"{}\", first(&values));",
+      "}"
+     ],
+     "answer": 0,
+     "clippy": "warning: writing `&Vec` instead of `&[_]` involves a new object where a slice will do\n --> src/main.rs:1:18\n  |\n1 | fn first(values: &Vec<i32>) -> i32 {\n  |                  ^^^^^^^^^\n  |\n  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#ptr_arg\n  = note: `-W clippy::ptr-arg` implied by `-W clippy::all`\n  = help: to override `-W clippy::all` add `#[allow(clippy::ptr_arg)]`\nhelp: change this to\n  |\n1 - fn first(values: &Vec<i32>) -> i32 {\n1 + fn first(values: &[i32]) -> i32 {\n  |"
+    },
+    {
+     "id": "smells-2",
+     "type": "better",
+     "prompt": "Which version accepts both vectors and arrays?",
+     "good": "B takes a slice. Both print 7, but B works with more callers.",
+     "bad": "Both run. Look for the parameter that asks for less.",
+     "a": [
+      "fn first(values: &Vec<i32>) -> i32 {",
+      "    values[0]",
+      "}",
+      "",
+      "fn main() {",
+      "    let values = vec![7, 8];",
+      "    println!(\"{}\", first(&values));",
+      "}"
+     ],
+     "b": [
+      "fn first(values: &[i32]) -> i32 {",
+      "    values[0]",
+      "}",
+      "",
+      "fn main() {",
+      "    let values = vec![7, 8];",
+      "    println!(\"{}\", first(&values));",
+      "}"
+     ],
+     "answer": "b",
+     "judged": false
     }
    ]
   }

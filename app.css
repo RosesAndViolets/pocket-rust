@@ -198,3 +198,15 @@ button.ln.ok { background: var(--aqua); }
 
 /* Show code exactly as it's typed: no joined symbols like -> turning into an arrow. */
 code, .code, .chip, .slot, .rustc, .out, .field input, .code * { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+
+/* Repo credits and paired versions wrap within a phone screen. */
+.source-credit { margin: 0; font-size: 12px; color: var(--ink-soft); overflow-wrap: anywhere; }
+.source-credit a { color: var(--ink); }
+.version { display: flex; flex-direction: column; gap: 10px; width: 100%; min-width: 0; padding: 12px;
+  text-align: left; background: var(--blush); border: 3px solid var(--ink); border-radius: 22px; cursor: pointer; }
+.version .code { width: 100%; }
+.version-label { font: 800 18px var(--display); }
+.version.sel { background: var(--lemon); }
+.version.ok { background: var(--aqua); }
+
+.fb .rustc { white-space: pre-wrap; overflow-wrap: anywhere; }

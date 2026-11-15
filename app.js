@@ -86,13 +86,15 @@
       ${miss ? `<button class="chunk review" type="button" data-go="#review"><span class="big">${miss}</span>
           <div><b>Review</b><span>Problems you got wrong, ready for another go.</span></div><span class="tag white">Go</span></button>` : ""}
       <h2 class="sec">All lessons</h2>
-      <ol class="lessons">${COURSE.lessons.map(l => {
+      ${["Basics", "Real programs, by area", "Review and fix"].map((title, i) => `
+      <h3 class="sec">Part ${i + 1} · ${title}</h3>
+      <ol class="lessons" start="${COURSE.lessons.find(l => l.part === i + 1)?.n || 1}">${COURSE.lessons.filter(l => l.part === i + 1).map(l => {
         const p = progress.lessons[l.id];
         const cls = p ? "done" : l === nl ? "next" : "";
         const state = p ? `<span class="state done">${p.right}/${p.total}</span>` : l === nl ? `<span class="state next">Next</span>` : `<span class="state new">New</span>`;
         return `<li><button class="chunk lesson-row ${cls}" type="button" data-go="#lesson-${l.id}">
           <span class="num">${l.n}</span><span><b>${esc(l.title)}</b><span class="sum">${l.summary}</span></span>${state}</button></li>`;
-      }).join("")}</ol>
+      }).join("")}</ol>${COURSE.lessons.some(l => l.part === i + 1) ? "" : '<p class="lede">Lessons coming soon.</p>'}`).join("")}
       <p class="foot-note">Every problem is checked against the real Rust compiler (${esc(COURSE.rustc || "rustc")}).</p>
     </main>`;
     app.querySelector("#sound-toggle").addEventListener("click", e => {
@@ -163,7 +165,7 @@
         const c = step.card;
         h = `<span class="tag">Lesson ${lesson.n} · ${esc(lesson.title)}</span>
           <h2 class="headline">${words(c.h)}</h2>
-          <p class="copy">${c.p}</p>${codeBlock(c.code)}${c.note ? `<p class="note">${c.note}</p>` : ""}
+          <p class="copy">${c.p}</p>${codeBlock(c.code)}${c.type === "real" ? `<p class="source-credit">${c.link ? `<a href="${esc(c.link)}" target="_blank" rel="noopener noreferrer">${esc(c.repo)} · ${esc(c.path)} · ${esc(c.tag)} · lines ${esc(c.lines.join("–"))}</a>` : `your code · ${esc(c.path)} · ${esc(c.tag)}`}<br>${esc(c.license)}</p>` : ""}${c.note ? `<p class="note">${c.note}</p>` : ""}
           <div class="dots" aria-hidden="true">${steps.filter(s => s.type === "card").map((_, i) => `<i class="${i === cur ? "on" : ""}"></i>`).join("")}</div>`;
         go.disabled = false;
         go.textContent = cur < nCards - 1 ? "Next" : "Start problems";
@@ -192,9 +194,10 @@
 
     function problemView(step, s, motion) {
       const p = step.p;
-      const label = { fill: "Fill the gap", error: "Find the error", output: "Predict the output", order: "Order the lines" }[p.type];
+      const label = { fill: "Fill the gap", error: "Find the error", output: "Predict the output", order: "Order the lines", smell: "Find the smell", better: "Pick the better version" }[p.type];
       const from = lessonOf[p.id];
       let h = step.review ? `<span class="tag lemon">Review · Lesson ${from.n}</span>` : `<span class="tag">${label}</span>`;
+      if (p.judged) h += `<span class="tag white">judgement call</span>`;
       h += `<p class="prompt">${words(step.review ? `${label}: ${p.prompt}` : p.prompt)}</p>`;
       const locked = s.done && s.ok;
       const slot = k => {
@@ -211,11 +214,14 @@
         }).join("") + `</div>` + bank();
       } else if (p.type === "output") {
         h += codeBlock(p.lines) + `<div class="out"><span class="lbl">Printed</span>` + p.answer.map((_, k) => `<div>${slot(k)}</div>`).join("") + `</div>` + bank();
-      } else if (p.type === "error") {
+      } else if (p.type === "error" || p.type === "smell") {
         h += `<div class="code">` + p.lines.map((l, n) => {
           const cls = s.pick === n ? (locked ? "ok" : "sel") : "";
           return `<button type="button" class="ln ${cls}" data-line="${n}" aria-pressed="${s.pick === n}"><span class="no">${n + 1}</span><span ${hang(l)}>${hl(l)}</span></button>`;
         }).join("") + `</div>`;
+      } else if (p.type === "better") {
+        h += ["a", "b"].map(key => `<button type="button" class="version ${s.pick === key ? (locked ? "ok" : "sel") : ""}" data-version="${key}" aria-pressed="${s.pick === key}" ${locked ? "disabled" : ""}>
+          <span class="version-label">${key.toUpperCase()}</span>${codeBlock(p[key])}</button>`).join("");
       } else if (p.type === "order") {
         h += `<div class="code">` + p.head.map(l => `<div class="ln"><span ${hang(l)}>${hl(l)}</span></div>`).join("") +
           `<div class="answer">` + s.seq.map((it, j) => `<button type="button" class="chip line ${just === "q" + j ? "just" : ""}" data-seq="${j}">${hl(it.t)}</button>`).join("") + `</div>` +
@@ -223,8 +229,9 @@
         h += `<div class="bank lines">` + s.pool.map((it, j) => `<button type="button" class="chip line" data-pool="${j}">${hl(it.t)}</button>`).join("") + `</div>`;
       }
       if (s.done) {
-        const showRustc = p.rustc && (s.ok || p.type !== "error");
-        h += `<div class="fb ${s.ok ? "good" : "bad"} ${motion === "fb" ? "pop" : ""}"><div><b>${s.ok ? "Right." : "Not quite."}</b> ${s.ok ? p.good : p.bad}</div>${showRustc && s.ok ? `<div class="rustc">${rustc(p.rustc)}</div>` : ""}</div>`;
+        const diagnostic = p.clippy || p.rustc;
+        const showRustc = diagnostic && (s.ok || p.type !== "error");
+        h += `<div class="fb ${s.ok ? "good" : "bad"} ${motion === "fb" ? "pop" : ""}"><div><b>${s.ok ? "Right." : "Not quite."}</b> ${s.ok ? p.good : p.bad}</div>${showRustc && s.ok ? `<div class="rustc">${rustc(diagnostic)}</div>` : ""}</div>`;
       }
       return h;
     }
@@ -272,7 +279,7 @@
       const s = st[cur];
       if (!t || t.disabled || !s || (s.done && s.ok)) return;
       if (t.dataset.chip !== undefined || t.dataset.pool !== undefined) Sfx.play("tap");
-      else if (t.dataset.line !== undefined) Sfx.play("select");
+      else if (t.dataset.line !== undefined || t.dataset.version !== undefined) Sfx.play("select");
     });
     body.addEventListener("click", e => {
       const step = steps[cur]; if (step.type !== "problem") return;
@@ -286,6 +293,7 @@
         tapped = "c" + t.dataset.chip;
         Sfx.play("place");   // the squish already played on touch-down; this is the pop as it lands
       } else if (t.dataset.slot !== undefined) { if (s.fill[+t.dataset.slot]) Sfx.play("remove"); s.fill[+t.dataset.slot] = null; }
+      else if (t.dataset.version !== undefined) s.pick = t.dataset.version;
       else if (t.dataset.line !== undefined) s.pick = +t.dataset.line;
       else if (t.dataset.pool !== undefined) { s.seq.push(s.pool.splice(+t.dataset.pool, 1)[0]); just = "q" + (s.seq.length - 1); Sfx.play("place"); }
       else if (t.dataset.seq !== undefined) { s.pool.push(s.seq.splice(+t.dataset.seq, 1)[0]); Sfx.play("remove"); }

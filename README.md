@@ -27,7 +27,7 @@ Edit `tools/course_src.py`, then run:
 python3 tools/build.py
 ```
 
-It needs `rustc` on your PATH. For each problem it checks that:
+It needs `rustc` and `clippy-driver` (usually in `~/.cargo/bin`) on your PATH. For each problem it checks that:
 
 - **Fill the gap:** the answer compiles and prints what it should, and every wrong chip
   fails or prints something else.
@@ -37,12 +37,34 @@ It needs `rustc` on your PATH. For each problem it checks that:
   answer is "won't compile".
 - **Order the lines:** the written order works. Every other order is also compiled and run,
   and any that print the same output are accepted too.
-- **Every card stands alone:** each lesson card's code compiles by itself, so a card never
+- **Find the smell (`smell`):** working code triggers exactly the named Clippy lint on the
+  stated primary line. The fixed code has no warnings and prints the same output. Both use
+  `-W clippy::all -W clippy::pedantic`; wrapped code's line numbers are adjusted for `fn main`.
+- **Pick the better version (`better`):** A and B compile and print the same output. A stated
+  lint occurs in the worse version only. With `lint=None`, the app labels it a "judgement call".
+- **Real snippets (`real`):** shown, not compiled. Include repo, tag or full commit, path,
+  1-based `(start, end)` lines (up to 25), and license. Non-commit refs are checked against
+  GitHub tags on first build (needs network and git); successful checks are cached. Branch
+  names such as `main` and `master` are rejected. Use `repo=None, own=True` for private owner
+  code: all other credits remain required, but no link is shown and it says "your code".
+- **Every card stands alone:** each ordinary lesson card's code compiles by itself, so a card never
   leans on a name (`p`, `Point`, `ages`…) that only an earlier card showed.
 - **No skipping ahead:** no code uses something a later lesson teaches (the `GATES` list).
 
 If anything fails, it prints what's wrong and leaves `course.json` unchanged. Compiler
-results are cached in `tools/.rustc-cache.json`.
+and Clippy results are cached in `tools/.rustc-cache.json`.
+
+Each lesson has `part`: 1 (Basics), 2 (Real programs, by area), or 3 (Review and fix).
+The home screen groups lessons by part. Lesson numbers stay sequential; ids and saved
+progress keys stay the same. Add lessons before the final review lesson as the course grows.
+
+Author helpers in `tools/course_src.py`:
+
+```python
+real(h, p, code, repo, tag, path, lines, license, note=None, *, own=False)
+smell(prompt, code, line, lint, fixed, good, bad, wrap=False)
+better(prompt, a, b, answer, lint, good, bad, wrap=False)
+```
 
 ## Sound
 
@@ -64,6 +86,10 @@ you're offline it waits until you're back online.
 
 Lesson 16, "Fix the compiler", adapts puzzles from Akira Nishikawa's Rust Compile Challenge
 (MIT license, © 2021 Akira Nishikawa): translated, shortened, and turned into tap-to-answer problems.
+
+"Clippy's top smells" quotes [Rayon v1.10.0, src/slice/mod.rs, lines 203–208](https://github.com/rayon-rs/rayon/blob/v1.10.0/src/slice/mod.rs#L203-L208),
+under the MIT license, © 2010 The Rust Project Developers. The snippet was checked against
+that tag's raw file. The [MIT notice](licenses/rayon-MIT.txt) is included with this app.
 
 ## Running it locally
 
