@@ -47,6 +47,8 @@ It needs `rustc` and `clippy-driver` (usually in `~/.cargo/bin`) on your PATH. F
   GitHub tags on first build (needs network and git); successful checks are cached. Branch
   names such as `main` and `master` are rejected. Use `repo=None, own=True` for private owner
   code: all other credits remain required, but no link is shown and it says "your code".
+- **Test examples:** code containing `#[test]` or `#[cfg(test)]` also compiles and runs
+  with `rustc --test`, so assertions inside tests are checked as well as ordinary main output.
 - **Every card stands alone:** each ordinary lesson card's code compiles by itself, so a card never
   leans on a name (`p`, `Point`, `ages`…) that only an earlier card showed.
 - **No skipping ahead:** no code uses something a later lesson teaches (the `GATES` list).

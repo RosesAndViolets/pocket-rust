@@ -56,9 +56,11 @@ except (OSError, subprocess.CalledProcessError):
     sys.exit("clippy-driver not found. Install it with: rustup component add clippy")
 
 
-def compile_run(src, clippy=False):
+def compile_run(src, clippy=False, test=False):
     """-> {ok, stdout, diags:[{level, code, lines, rendered}]} (cached by source hash)."""
-    key = hashlib.sha1((("clippy3 " + CLIPPY_VERSION if clippy else "remap2") + "\n" + src).encode()).hexdigest()  # salt: skip entries cached before REMAP
+    has_tests = bool(re.search(r"#\s*\[\s*(?:test\b|cfg\s*\(\s*test\b)", src))
+    test_salt = "test-harness1" if test else "with-tests1" if has_tests else ""
+    key = test_salt + hashlib.sha1((("clippy3 " + CLIPPY_VERSION if clippy else "remap2") + "\n" + src).encode()).hexdigest()  # salt: skip entries cached before REMAP
     if key in cache:
         return cache[key]
     with tempfile.TemporaryDirectory() as d:
@@ -66,7 +68,7 @@ def compile_run(src, clippy=False):
         path.write_text(src)
         flags = ["-W", "clippy::all", "-W", "clippy::pedantic"] if clippy else ["-A", "warnings"]
         p = subprocess.run([CLIPPY if clippy else "rustc", "--edition", "2021", *flags, "--error-format=json",
-                            "--color", "never", *REMAP, "-o", str(Path(d) / "bin"), str(path)],
+                            "--color", "never", *(["--test"] if test else []), *REMAP, "-o", str(Path(d) / "bin"), str(path)],
                            capture_output=True, text=True, cwd=d)
         diags = []
         for raw in p.stderr.splitlines():
@@ -96,6 +98,12 @@ def compile_run(src, clippy=False):
                 res["ok"] = r.returncode == 0
             except subprocess.TimeoutExpired:  # a reordered loop that never ends
                 res["ok"] = False
+    # Ordinary rustc omits #[test] functions. Also compile and run the harness so a
+    # broken assertion or a type error under cfg(test) cannot pass as a checked card.
+    if res["ok"] and has_tests and not test:
+        tested = compile_run(src, test=True)
+        if not tested["ok"]:
+            res = {**res, "ok": False, "diags": tested["diags"]}
     cache[key] = res
     return res
 

@@ -1980,6 +1980,832 @@ fn main() {
     ],
 })
 
+# ─────────────────────────────── 17 ───────────────────────────────
+COURSE.append({
+    'part': 1,
+    'id': 'closures',
+    'title': 'Closures',
+    'summary': 'Captures, move, and passing closures to functions.',
+    "cards": [
+        card('Capture by borrowing',
+             'Lesson 12 used closures as small functions. A closure can also borrow nearby values. No parameters? Write `||`. A borrow lasts as long as the closure needs it.',
+             '''let word = String::from("hi");
+let say = || println!("{word}");
+say();
+println!("{word}");'''),
+        card('Fn, FnMut and FnOnce',
+             'These traits describe calls. `Fn` can run through a shared borrow. `FnMut` may change captures. `FnOnce` may consume them. Every closure is FnOnce; Fn closures also satisfy FnMut. Ask for the trait that lets the most closures in: FnOnce if you call it once, FnMut if you call it more, Fn only if you must.',
+             '''fn twice<F: FnMut()>(mut action: F) {
+    action();
+    action();
+}
+let mut count = 0;
+twice(|| count += 1);
+println!("{count}");''',
+             'twice needs repeated calls, so FnOnce is not enough. FnMut also accepts closures that only read. A closure variable that changes captures needs `let mut`.'),
+        card('Move captures into a returned closure',
+             '`move` captures by value. A String moves; numbers copy. This closure must own word because the local variable ends when make_say returns. `impl Fn()` promises a callable value while hiding its concrete type.',
+             '''fn make_say() -> impl Fn() {
+    let word = String::from("hi");
+    move || println!("{word}")
+}
+let say = make_say();
+say();
+say();''',
+             "move does not mean 'call only once'. This closure only reads its owned word, so it implements Fn."),
+        card('Consume a capture once',
+             'Returning a captured String gives it away. That closure only implements FnOnce. A function that needs one call can accept it and return its result.',
+             '''fn run<F: FnOnce() -> String>(f: F)
+    -> String
+{
+    f()
+}
+let word = String::from("bye");
+let take = move || word;
+println!("{}", run(take));'''),
+    ],
+    "problems": [
+        out('What does passing this closure print?',
+             '''fn apply<F: FnMut(i32) -> i32>(mut f: F)
+    -> i32
+{
+    f(2) + f(3)
+}
+fn main() {
+    let offset = 4;
+    println!("{}", apply(|n| n + offset));
+}''',
+             ['5', '9', '13', WONT], ['13'],
+             'apply calls the supplied closure with 2 and 3. Adding the captured offset gives 6 + 7.',
+             'Use the same captured offset in both calls.', wrap=False),
+        out('What does this print?',
+             '''let extra = 4;
+let add = |n| n + extra;
+println!("{}", add(3));
+println!("{extra}");''',
+             ['3', '4', '7', "won't compile"],
+             ['7', '4'],
+             'The closure borrows extra. It adds 4 without changing or taking it.',
+             'A shared capture leaves the original available.'),
+        out('What does this print?',
+             '''let mut n = 1;
+let mut step = || n *= 2;
+step();
+step();
+println!("{n}");''',
+             ['1', '2', '4', "won't compile"],
+             ['4'],
+             'Each FnMut call doubles the same captured n. Its mutable borrow ends after the last call.',
+             'Track the same variable through both calls.'),
+        err('Which line does the compiler reject?',
+             '''fn main() {
+    let mut n = 0;
+    let tick = || n += 1;
+    tick();
+}''',
+             4,
+             'E0596',
+             'rustc rejects the call because it needs mutable access to tick. Fix the declaration to `let mut tick`.',
+             'Find the call that needs a mutable closure variable.'),
+        err('Which line uses a moved value?',
+             '''fn main() {
+    let s = String::from("hi");
+    let say = move || println!("{s}");
+    println!("{s}");
+    say();
+}''',
+             4,
+             'E0382',
+             'move gave the closure ownership of s.',
+             'Find a use of s outside its new owner.'),
+        fill('Return a closure that owns its local String.',
+             '''fn greeting() -> impl Fn() -> usize {
+    let text = String::from("hello");
+    __ || text.len()
+}
+fn main() {
+    println!("{}", greeting()());
+}''',
+             ['move', 'return', 'mut'],
+             ['move'],
+             'Without move, reading text.len() borrows text. That borrow cannot survive the function. move gives the closure the String.',
+             'The local String must survive inside the returned closure.', output=['5'], wrap=False),
+        out('This calls the closure twice. What happens?',
+             '''let word = String::from("hi");
+let take = move || word;
+println!("{}", take());
+println!("{}", take());''',
+             ['hi', "won't compile"],
+             ["won't compile"],
+             'The first call moves the String out. This FnOnce closure is consumed and cannot be called again.',
+             'Returning an owned String gives it away.'),
+        order('Make it print 8.',
+             ['fn main() {'],
+             ['let base = 5;', 'let add = |n| base + n;', 'println!("{}", add(3));'],
+             ['}'],
+             ['8'],
+             'Make the captured value, make the closure, then call it.',
+             'Each name must exist before use.'),
+    ],
+})
+
+# ─────────────────────────────── 18 ───────────────────────────────
+COURSE.append({
+    'part': 1,
+    'id': 'smart-pointers',
+    'title': 'Box, Rc and when you need them',
+    'summary': 'One owner on the heap, or several owners on one thread.',
+    "cards": [
+        card('Box owns a value on the heap',
+             '`Box<T>` keeps its value on the heap. The box is its single owner. Use `*` to read the value. Ordinary local values are fine unless you need this extra indirection.',
+             '''let n = Box::new(7);
+println!("{}", *n);'''),
+        card('Give recursive types a known size',
+             'An enum cannot contain itself directly: how big would it be? A box has a known size, so it can point to the next node.',
+             '''enum List {
+    End,
+    Next(i32, Box<List>),
+}
+let end = Box::new(List::End);
+let list = List::Next(1, end);
+match list {
+    List::Next(n, _) => println!("{n}"),
+    List::End => println!("empty"),
+}'''),
+        card('Rc shares ownership on one thread',
+             '`Rc` counts owners. `Rc::clone` makes another owner of the same value; it does not copy the value. The value is dropped when the last owner goes away.',
+             '''use std::rc::Rc;
+let name = Rc::new(String::from("tree"));
+let other = Rc::clone(&name);
+println!("{other}");
+println!("{}", Rc::strong_count(&name));''',
+             'Use a borrow for temporary access. Use Rc when several places must own one value. Rc does not give mutable access, and cannot be sent between threads.'),
+    ],
+    "problems": [
+        fill('Put 9 in a box.',
+             '''let n = __::new(9);
+println!("{}", *n);''',
+             ['Box', 'Vec', 'String'],
+             ['Box'],
+             '`Box::new` allocates one owned value.',
+             'A vector holds a list; here we want one number.', output=['9']),
+        out('What does this print?',
+             '''let mut n = Box::new(2);
+*n += 3;
+println!("{}", *n);''',
+             ['2', '3', '5', "won't compile"],
+             ['5'],
+             'The mutable box lets us change its number through `*n`.',
+             'Dereferencing reaches the number inside the box.'),
+        err('Which line uses a moved box?',
+             '''fn main() {
+    let first = Box::new(4);
+    let second = first;
+    println!("{}", *first);
+    println!("{}", *second);
+}''',
+             4,
+             'E0382',
+             'A box has one owner. Assignment moves it into `second`.',
+             'Box is not Copy, even when its number is.'),
+        fill('Give this recursive enum a known size.',
+             '''enum List {
+    End,
+    Next(__<List>),
+}
+fn main() {
+    let end = Box::new(List::End);
+    let _list = List::Next(end);
+}''',
+             ['Box', 'Option', 'Result'],
+             ['Box'],
+             'A Box points to the next node instead of storing it directly.',
+             'Option would still contain the recursive value directly.', wrap=False),
+        out('How many owners remain?',
+             '''use std::rc::Rc;
+let a = Rc::new(10);
+let b = Rc::clone(&a);
+{
+    let c = Rc::clone(&b);
+}
+println!("{}", Rc::strong_count(&a));''',
+             ['1', '2', '3', "won't compile"],
+             ['2'],
+             '`c` is dropped at the closing brace. Only `a` and `b` remain.',
+             'Count owners that are still in scope.'),
+        fill('Share ownership of the same String.',
+             '''use std::rc::Rc;
+let a = Rc::new(String::from("oak"));
+let b = Rc::__(&a);
+println!("{b}");
+println!("{}", Rc::strong_count(&a));''',
+             ['clone', 'new', 'strong_count'],
+             ['clone'],
+             'Rc::clone adds an owner of the same allocation.',
+             'We want another Rc, not a count or a new allocation.', output=['oak', '2']),
+        err('Which line tries to change a shared value?',
+             '''use std::rc::Rc;
+fn main() {
+    let mut a = Rc::new(2);
+    *a = 5;
+}''',
+             4,
+             'E0594',
+             'A mutable Rc variable does not make its shared value mutable.',
+             'Rc gives shared access to the value inside.'),
+        order('Make two owners, then print their count.',
+             ['use std::rc::Rc;', 'fn main() {'],
+             ['let a = Rc::new(7);', 'let b = Rc::clone(&a);', 'println!("{}", Rc::strong_count(&b));'],
+             ['}'],
+             ['2'],
+             'Create the first owner before cloning it.',
+             'The count must happen while both owners exist.'),
+    ],
+})
+
+# ─────────────────────────────── 19 ───────────────────────────────
+COURSE.append({
+    'part': 1,
+    'id': 'threads',
+    'title': 'Threads, Arc and Mutex',
+    'summary': 'Run work on another thread and share state safely.',
+    "cards": [
+        card('Spawn work, then join it',
+             '`thread::spawn` runs a closure on another thread. `move` gives it owned data. `join` waits and returns a Result: the thread may have panicked.',
+             '''use std::thread;
+let word = String::from("hi");
+let job = thread::spawn(move || word.len());
+println!("{}", job.join().unwrap());''',
+             'These tiny examples unwrap to stay short. Real code should decide how to handle a panic.'),
+        card('Arc shares owners between threads',
+             'Rc works on one thread. Arc counts owners safely between threads. It shares ownership, but does not let you change the value by itself.',
+             '''use std::sync::Arc;
+use std::thread;
+let n = Arc::new(6);
+let other = Arc::clone(&n);
+let job = thread::spawn(move || *other + 1);
+println!("{}", job.join().unwrap());
+println!("{}", *n);'''),
+        card('Mutex allows one user at a time',
+             '`lock` waits for exclusive access. It returns a guard. Read or change through `*guard`; dropping it releases the lock. A scope keeps the lock short.',
+             '''use std::sync::{Arc, Mutex};
+use std::thread;
+let count = Arc::new(Mutex::new(0));
+let other = Arc::clone(&count);
+let job = thread::spawn(move || {
+    let mut guard = other.lock().unwrap();
+    *guard += 1;
+});
+job.join().unwrap();
+println!("{}", *count.lock().unwrap());''',
+             'lock returns a Result because a previous holder may have panicked. Never join a thread while holding a lock it needs.'),
+    ],
+    "problems": [
+        out('What does this print after the worker finishes?',
+             '''use std::thread;
+let task = thread::spawn(|| {
+    String::from("done")
+});
+match task.join() {
+    Ok(text) => println!("{text}"),
+    Err(_) => println!("panic"),
+}''',
+             ['done', 'panic', "won't compile"],
+             ['done'],
+             'join waits for the worker. It returns Ok with the String produced by the closure.',
+             'The worker returns normally, so follow the Ok branch.'),
+        out('What does this print?',
+             '''use std::thread;
+let n = 5;
+let job = thread::spawn(move || n * 2);
+println!("{}", job.join().unwrap());
+println!("{n}");''',
+             ['5', '10', "won't compile"],
+             ['10', '5'],
+             'The closure gets a copy of the number. Joining gives 10; `n` is still 5.',
+             'Numbers are Copy, even with move.'),
+        err('Which line uses a moved String?',
+             '''use std::thread;
+fn main() {
+    let s = String::from("hi");
+    let job = thread::spawn(move || s.len());
+    println!("{s}");
+    job.join().unwrap();
+}''',
+             5,
+             'E0382',
+             'The thread owns the String after the move.',
+             "Find the old owner's use after spawning."),
+        fill('Share ownership across threads.',
+             '''use std::sync::Arc;
+use std::thread;
+let n = Arc::new(8);
+let other = Arc::__(&n);
+let job = thread::spawn(move || *other);
+println!("{}", job.join().unwrap());''',
+             ['clone', 'new', 'strong_count'],
+             ['clone'],
+             'Arc::clone makes a second owner for the new thread.',
+             'The thread needs an Arc to the same number.', output=['8']),
+        out('What does this print after joining?',
+             '''use std::sync::{Arc, Mutex};
+use std::thread;
+let n = Arc::new(Mutex::new(2));
+let other = Arc::clone(&n);
+let job = thread::spawn(move || {
+    *other.lock().unwrap() += 3;
+});
+job.join().unwrap();
+println!("{}", *n.lock().unwrap());''',
+             ['2', '3', '5', "won't compile"],
+             ['5'],
+             'The thread adds 3 under the lock. join ensures it finishes before we read.',
+             'The two Arcs share one Mutex and one number.'),
+        fill('Get exclusive access to the number.',
+             '''use std::sync::Mutex;
+let n = Mutex::new(4);
+{
+    let mut guard = n.__().unwrap();
+    *guard += 1;
+}
+println!("{}", *n.lock().unwrap());''',
+             ['lock', 'clone', 'join'],
+             ['lock'],
+             'lock gives a guard. The brace drops it before the next lock.',
+             'Only one guard can hold this lock at a time.', output=['5']),
+        out('This sends an Rc to a thread. What happens?',
+             '''use std::rc::Rc;
+use std::thread;
+let n = Rc::new(4);
+let job = thread::spawn(move || *n);
+println!("{}", job.join().unwrap());''',
+             ['4', "won't compile"],
+             ["won't compile"],
+             'Rc cannot cross threads. Use Arc for thread-safe shared ownership.',
+             "Rc's owner count is only safe on one thread."),
+        order("Print the worker's result.",
+             ['use std::thread;', 'fn main() {'],
+             ['let job = thread::spawn(|| 6);', 'let n = job.join().unwrap();', 'println!("{n}");'],
+             ['}'],
+             ['6'],
+             'Spawn, wait, then use the returned value.',
+             'A thread handle is not its result.'),
+    ],
+})
+
+# ─────────────────────────────── 20 ───────────────────────────────
+COURSE.append({
+    'part': 1,
+    'id': 'custom-errors',
+    'title': 'Your own error types',
+    'summary': 'Name failures, print them, and convert them with From and ?.',
+    "cards": [
+        card('Give failures names',
+             'An error enum lets callers match the reason for failure. Return it as the E in Result<T, E>.',
+             '''#[derive(Debug)]
+enum AgeError { Empty, Invalid }
+fn age(text: &str) -> Result<i32, AgeError> {
+    if text.is_empty() {
+        return Err(AgeError::Empty);
+    }
+    Ok(18)
+}'''),
+        card('Display is the message for people',
+             "Debug shows a type for developers. Display controls `{}`. Write the message into the supplied formatter with `write!`; return its fmt::Result. `'_` asks Rust to infer this lifetime, rather than naming it `'a`.",
+             '''use std::fmt;
+#[derive(Debug)]
+struct BadAge;
+impl fmt::Display for BadAge {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "invalid age")
+    }
+}
+impl std::error::Error for BadAge {}
+fn main() {
+    println!("{}", BadAge);
+}''',
+             'The standard Error trait requires Debug and Display. For this simple type its impl can be empty.'),
+        card('From connects error types',
+             'Implement From<OldError> for your error type. Then `?` converts an error and returns early. On success, `?` gives the value inside Ok.',
+             '''use std::num::ParseIntError;
+#[derive(Debug)]
+enum AgeError { Invalid(ParseIntError) }
+impl From<ParseIntError> for AgeError {
+    fn from(e: ParseIntError) -> Self {
+        Self::Invalid(e)
+    }
+}
+fn age(s: &str) -> Result<i32, AgeError> {
+    let n = s.parse::<i32>()?;
+    Ok(n)
+}
+fn main() {
+    println!("{}", age("18").unwrap());
+}''',
+             'Without a matching From conversion, `?` cannot change the error type for you.'),
+    ],
+    "problems": [
+        fill('Return the named failure.',
+             '''enum InputError { Empty }
+fn read(s: &str)
+    -> Result<usize, InputError>
+{
+    if s.is_empty() {
+        return __(InputError::Empty);
+    }
+    Ok(s.len())
+}
+fn main() {
+    println!("{}", read("").is_err());
+}''',
+             ['Err', 'Ok', 'Some'],
+             ['Err'],
+             'Err carries the failure value.',
+             'The return type is Result, not Option.', output=['true'], wrap=False),
+        out('Which branch runs?',
+             '''enum InputError { Empty, Negative }
+let result: Result<i32, InputError> =
+    Err(InputError::Negative);
+match result {
+    Ok(n) => println!("{n}"),
+    Err(InputError::Empty) => {
+        println!("empty");
+    }
+    Err(InputError::Negative) => {
+        println!("negative");
+    }
+}''',
+             ['0', 'empty', 'negative', "won't compile"],
+             ['negative'],
+             'The enum names the exact failure, so callers can match it.',
+             'Follow the Err variant and the inner variant.'),
+        fill('Send the error message to its formatter.',
+             '''use std::fmt;
+struct Missing;
+impl fmt::Display for Missing {
+    fn fmt(
+        &self,
+        out: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(__, "missing name")
+    }
+}
+fn main() { println!("{}", Missing); }''',
+             ['out', 'self', 'std::io::stdout()'],
+             ['out'],
+             'Display must write into the formatter it receives. Here that parameter is named out.',
+             'Which value is the formatter passed to fmt?', output=['missing name'], wrap=False),
+        out('What does Display print?',
+             '''use std::fmt;
+#[derive(Debug)]
+struct Bad;
+impl fmt::Display for Bad {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "try again")
+    }
+}
+fn main() { println!("{}", Bad); }''',
+             ['Bad', 'try again', "won't compile"],
+             ['try again'],
+             '{} uses Display. {:?} would use Debug.',
+             'Read the message in write!.', wrap=False),
+        fill('Choose the destination error type.',
+             '''use std::num::ParseIntError;
+#[derive(Debug)]
+struct Bad;
+impl From<ParseIntError> for __ {
+    fn from(_: ParseIntError) -> Self { Bad }
+}
+fn read(s: &str) -> Result<i32, Bad> {
+    Ok(s.parse::<i32>()?)
+}
+fn main() {
+    println!("{}", read("7").unwrap());
+}''',
+             ['Bad', 'ParseIntError', 'i32'],
+             ['Bad'],
+             'The function returns Result<i32, Bad>, so the conversion must build Bad from the parse error.',
+             'Look at the error type returned by read, and the value built by from.', output=['7'], wrap=False),
+        out('What does this print?',
+             '''use std::num::ParseIntError;
+#[derive(Debug)]
+struct Bad;
+impl From<ParseIntError> for Bad {
+    fn from(_: ParseIntError) -> Self { Bad }
+}
+fn read(s: &str) -> Result<i32, Bad> {
+    let n = s.parse::<i32>()?;
+    Ok(n + 1)
+}
+fn main() {
+    println!("{}", read("oops").is_err());
+}''',
+             ['true', 'false', "won't compile"],
+             ['true'],
+             'Parsing fails. ? converts the error to Bad and returns before adding 1.',
+             'An error takes the early return path.', wrap=False),
+        err('Which line needs an error conversion?',
+             '''#[derive(Debug)]
+struct Bad;
+fn read(s: &str) -> Result<i32, Bad> {
+    let n = s.parse::<i32>()?;
+    Ok(n)
+}
+fn main() {}''',
+             4,
+             'E0277',
+             'Bad has no From<ParseIntError> implementation, so ? cannot convert the error.',
+             "The parse error and the function's error have different types."),
+        order('Return success after checking for empty input.',
+             ['fn read(s: &str) -> Result<i32, String> {', 'if s.is_empty() {'],
+             ['    return Err(String::from("empty"));', '}', 'let n = 8;', 'Ok(n)'],
+             ['}', 'fn main() {', '    println!("{}", read("yes").unwrap());', '}'],
+             ['8'],
+             'Check for failure first. The tail expression returns the success value.',
+             'Ok(n) must be last and n must exist first.'),
+    ],
+})
+
+# ─────────────────────────────── 21 ───────────────────────────────
+COURSE.append({
+    'part': 1,
+    'id': 'iterator-chains',
+    'title': 'Iterator chains and impl Trait',
+    'summary': 'Filter, transform and collect. Return an iterator without naming its type.',
+    "cards": [
+        card('A chain describes the work',
+             'Lesson 12 chained map and sum. Now keep only some items with filter. into_iter consumes a collection and yields owned items. filter borrows each item to ask whether to keep it.',
+             '''let nums = vec![1, 2, 3, 4];
+let total: i32 = nums.into_iter()
+    .filter(|n| *n > 2)
+    .map(|n| n * 10)
+    .sum();
+println!("{total}");''',
+             'filter borrows each item to ask the question, so its parameter is &i32 here. map receives the owned i32.'),
+        card('Iterators are lazy',
+             'Building a chain does no work yet. `collect` runs it and builds a collection. With iter(), items are borrowed; copied() turns borrowed Copy values into owned ones.',
+             '''let nums = vec![2, 4, 6];
+let picked: Vec<i32> = nums.iter()
+    .copied().take(2).collect();
+println!("{:?}", picked);
+println!("{}", nums.len());''',
+             'take(2) limits this chain to two items. The original vector is still available.'),
+        card('Return impl Iterator',
+             '`impl Iterator<Item = i32>` hides the concrete iterator type. Callers can still use iterator methods. The function must return one concrete type on all paths.',
+             '''fn doubles() -> impl Iterator<Item = i32> {
+    (1..4).map(|n| n * 2)
+}
+fn main() {
+    let total: i32 = doubles().sum();
+    println!("{total}");
+}''',
+             'This is not a box or a choice of types. Rust still knows the one exact type underneath.'),
+    ],
+    "problems": [
+        fill('Keep only numbers above 2.',
+             '''let total: i32 = vec![1, 3, 4].into_iter()
+    .__(|n| *n > 2).sum();
+println!("{total}");''',
+             ['filter', 'map', 'take'],
+             ['filter'],
+             'filter keeps 3 and 4, which sum to 7.',
+             'We want to keep items, not turn them into booleans.', output=['7']),
+        out('What does the chain print?',
+             '''let n: i32 = (1..5)
+    .filter(|n| *n % 2 == 0)
+    .map(|n| n * 3).sum();
+println!("{n}");''',
+             ['6', '12', '18', "won't compile"],
+             ['18'],
+             'The even numbers are 2 and 4. Their triples add to 18.',
+             'Filter first, then transform the surviving items.'),
+        fill('Build a vector from the iterator.',
+             '''let nums: Vec<i32> = (1..4)
+    .map(|n| n + 1).__();
+println!("{:?}", nums);''',
+             ['collect', 'sum', 'max'],
+             ['collect'],
+             'collect builds the Vec named by the type annotation.',
+             'Which consumer builds a collection?', output=['[2, 3, 4]']),
+        out('What does this print?',
+             '''let steps = (0..3).map(|n| {
+    println!("work");
+    n + 1
+});
+println!("ready");''',
+             ['work', 'ready', "won't compile"],
+             ['ready'],
+             'Nothing consumes steps, so the map closure never runs.',
+             'An unused iterator is lazy.'),
+        fill("Hide the iterator's concrete type.",
+             '''fn nums() -> __ Iterator<Item = i32> {
+    1..4
+}
+fn main() {
+    println!("{}", nums().sum::<i32>());
+}''',
+             ['impl', 'dyn', 'enum'],
+             ['impl'],
+             'impl Iterator promises iterator methods while hiding its type.',
+             'No box is needed for this one concrete return type.', output=['6'], wrap=False),
+        out('What does take keep?',
+             '''let nums = vec![3, 5, 7];
+let total: i32 = nums.iter()
+    .copied().take(2).sum();
+println!("{total}");
+println!("{}", nums.len());''',
+             ['2', '3', '8', '15'],
+             ['8', '3'],
+             'take keeps 3 and 5. Iterating by borrow leaves all three originals.',
+             'The chain limits its items; it does not shorten nums.'),
+        out('What happens when these iterator types differ?',
+             '''fn nums(short: bool)
+    -> impl Iterator<Item = i32>
+{
+    if short {
+        0..2
+    } else {
+        (0..2).map(|n| n + 1)
+    }
+}
+fn main() {
+    for n in nums(false) {
+        println!("{n}");
+    }
+}''',
+             ['0', '1', '2', "won't compile"],
+             ["won't compile"],
+             'A range and a mapped range have different concrete types. impl Trait needs one type.',
+             'Both yield i32, but their iterator types differ.', wrap=False),
+        order('Transform, collect, then print.',
+             ['fn main() {'],
+             ['let steps = (1..3).map(|n| n * 2);', 'let nums: Vec<i32> = steps.collect();', 'println!("{:?}", nums);'],
+             ['}'],
+             ['[2, 4]'],
+             'The lazy chain is consumed by collect.',
+             'Create each value before its first use.'),
+    ],
+})
+
+# ─────────────────────────────── 22 ───────────────────────────────
+COURSE.append({
+    'part': 1,
+    'id': 'tests-layout',
+    'title': 'Tests and crate layout',
+    'summary': 'Check behavior, put logic in a library, and keep main small.',
+    "cards": [
+        card('A test is a function with a check',
+             '`#[test]` marks a test function. `cargo test` runs it. `assert_eq!` checks two values and panics if they differ. A test passes when it returns without panicking.',
+             '''fn double(n: i32) -> i32 { n * 2 }
+#[test]
+fn doubles_three() {
+    assert_eq!(double(3), 6);
+}
+fn main() {
+    assert_eq!(double(0), 0);
+}''',
+             'A normal program does not run #[test] functions. Use cargo test to run them.'),
+        card('Put unit tests beside the code',
+             "`#[cfg(test)]` includes a module only during tests. `use super::*` brings the parent module's names into scope, including private helpers.",
+             '''fn add(a: i32, b: i32) -> i32 { a + b }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn adds_zero() {
+        assert_eq!(add(4, 0), 4);
+    }
+}
+fn main() {}'''),
+        card('Library logic, thin main',
+             'Cargo puts reusable logic in src/lib.rs. src/main.rs is a separate binary crate: read input, call the library, print a result. For package pocket-demo, import the library as pocket_demo.',
+             '''// src/lib.rs in a Cargo project:
+// pub fn double(n: i32) -> i32 { n * 2 }
+// src/main.rs in that project:
+// fn main() {
+//     let n = pocket_demo::double(3);
+//     println!("{n}");
+// }
+// Single-file version for practice:
+mod logic {
+    pub fn double(n: i32) -> i32 { n * 2 }
+}
+fn main() {
+    println!("{}", logic::double(3));
+}''',
+             "Run cargo test from the project folder. Integration tests in tests/*.rs use the library's public API as a caller would."),
+        card('Modules can live in files',
+             'In lib.rs, `pub mod math;` loads math.rs (or math/mod.rs). Put `pub fn double` in that file. The library exposes it as pocket_demo::math::double. These exercises keep the same module inline.',
+             '''// src/lib.rs: pub mod math;
+// src/math.rs:
+// pub fn double(n: i32) -> i32 { n * 2 }
+// Equivalent inline module:
+pub mod math {
+    pub fn double(n: i32) -> i32 { n * 2 }
+}
+fn main() { assert_eq!(math::double(3), 6); }''',
+             'A file does not become a module just by existing. A mod declaration connects it to the crate.'),
+    ],
+    "problems": [
+        fill("Check the function's answer.",
+             '''fn inc(n: i32) -> i32 { n + 1 }
+fn main() {
+    __!(inc(2), 3);
+    println!("passed");
+}''',
+             ['assert_eq', 'assert', 'println'],
+             ['assert_eq'],
+             'assert_eq! checks that both values are equal.',
+             'We need a check of two values, not a print.', output=['passed'], wrap=False),
+        out('What prints after a passing check?',
+             '''assert_eq!(2 + 3, 5);
+println!("passed");''',
+             ['5', 'passed', "won't compile"],
+             ['passed'],
+             'A passing assertion prints nothing and lets execution continue.',
+             'The println runs after the assertion succeeds.'),
+        fill('Expose the function to main.',
+             '''mod math {
+    __ fn double(n: i32) -> i32 { n * 2 }
+}
+fn main() {
+    assert_eq!(math::double(4), 8);
+    println!("passed");
+}''',
+             ['pub', 'mut', 'let'],
+             ['pub'],
+             'pub lets main call the function through the module path.',
+             'Items are private unless you expose them.', output=['passed'], wrap=False),
+        err('Which line calls a private function?',
+             '''mod math {
+    fn double(n: i32) -> i32 { n * 2 }
+}
+fn main() {
+    assert_eq!(math::double(2), 4);
+}''',
+             5,
+             'E0603',
+             'The function needs pub for main to call it from outside math.',
+             'Find the call that crosses the module boundary.'),
+        out('What does a normal run print?',
+             '''#[test]
+fn checks_sum() { assert_eq!(2 + 2, 4); }
+fn main() { println!("main"); }''',
+             ['main', 'test', '4', "won't compile"],
+             ['main'],
+             'A normal run executes main. cargo test uses a separate test harness.',
+             '#[test] does not add a call inside main.', wrap=False),
+        fill("Reach the inline module's function.",
+             '''mod math {
+    pub fn add(a: i32, b: i32) -> i32 {
+        a + b
+    }
+}
+fn main() {
+    assert_eq!(__::add(2, 3), 5);
+    println!("passed");
+}''',
+             ['math', 'main', 'super'],
+             ['math'],
+             "The module's name starts the path to its public function.",
+             'Use the name after mod.', output=['passed'], wrap=False),
+        fill('Check the expected length in this test.',
+             '''#[test]
+fn four_letters() {
+    assert_eq!("rust".len(), __);
+}
+fn main() { println!("ready"); }''',
+             ['4', '0', '5'],
+             ['4'],
+             'The test checks four letters. A normal run prints ready; cargo test runs the assertion.',
+             'Choose the expected value that makes the assertion pass.', output=['ready'], wrap=False),
+        out('What do these boundary checks print?',
+             '''fn length(s: &str) -> usize { s.len() }
+fn main() {
+    assert_eq!(length(""), 0);
+    assert_eq!(length("rust"), 4);
+    println!("passed");
+}''',
+             ['0', '4', 'passed', "won't compile"],
+             ['passed'],
+             'Both checks pass, including the empty input. Assertions do not print their values.',
+             'Only println produces output.', wrap=False),
+        order('Keep main thin: call logic, check, print.',
+             ['mod logic {', 'pub fn double(n: i32) -> i32 { n * 2 }', '}', 'fn main() {'],
+             ['let n = logic::double(5);', 'assert_eq!(n, 10);', 'println!("{n}");'],
+             ['}'],
+             ['10'],
+             'main uses the public logic function and checks its answer.',
+             'n must be made before its check and print.'),
+    ],
+})
+
 # R1 sample: later content jobs insert lessons before this review lesson.
 _SMELLY = '''
 fn first(values: &Vec<i32>) -> i32 {
@@ -2038,4 +2864,11 @@ GATES = [
     (r"\bfn\s+\w+<|\bimpl<|\bstruct\s+\w+<|'[a-z]\b(?!')|PartialOrd|\bDisplay\b|\bClone\b|\bCopy\b", 13),
     (r"\bmod\b|\buse\b|#\[derive|\bpub\b|\{:\?\}|PartialEq|\bEq\b|\bDebug\b|\bu8\b", 14),
     (r"HashMap|\.insert\(|\.entry\(|or_insert", 15),
+    # Basic closures/map/sum/max remain in lesson 12; these are deeper tools.
+    (r"\bmove\s*\||\bFn(?:Mut|Once)?\b|\bimpl\s+Fn(?:Mut|Once)?\b|Box\s*<\s*dyn\s+Fn", 17),
+    (r"\b(?:Box|Rc|Weak)\b", 18),
+    (r"\b(?:Arc|Mutex|RwLock|thread|Send|Sync)\b", 19),
+    (r"\b(?:From|Into|ParseIntError)\b|impl\s+(?:\w+::)*Display\b|std::error::Error|\.into\s*\(|\b(?:write|writeln)\s*!", 20),
+    (r"(?:->|:|&)\s*(?:&\s*)?impl\s+(?!Fn(?:Mut|Once)?\b)|\bIterator\b|\.(?:filter|filter_map|collect|take|copied|enumerate|flat_map|rev|zip|fold|skip)\s*\(", 21),
+    (r"#\s*\[\s*(?:test|cfg\s*\(\s*test)|\bassert(?:_eq|_ne)?!", 22),
 ]
