@@ -116,6 +116,17 @@ Public excerpts link to exact lines at those release tags and are shown, not com
 “your code” without public links. They contain code only, with no personal data or file paths.
 Exercises use plain std analogues; their checks do not prove async runtime behavior.
 
+The calculations lessons also quote [Rayon v1.10.0](https://github.com/rayon-rs/rayon/tree/v1.10.0)
+(iterator pipeline, mutable slice splitting, and split/work/join reduction), using the same
+[MIT notice](licenses/rayon-MIT.txt) credited above.
+
+They quote [ndarray 0.16.1](https://github.com/rust-ndarray/ndarray/tree/0.16.1)
+(storage and shape, generic numeric bounds, and in-place mapping), under the MIT license,
+© 2015–2021 Ulrik Sverdrup “bluss”, Jim Turner, and ndarray developers.
+The [MIT notice](licenses/ndarray-MIT.txt) is included. ndarray also offers Apache-2.0;
+these excerpts use its MIT terms. Every excerpt links to exact tagged lines.
+The std exercises check behavior and allocation structure, not measured speed or Rayon scheduling.
+
 ## Running it locally
 
 ```sh

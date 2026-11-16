@@ -4159,6 +4159,557 @@ COURSE.append({'part': 2,
                'bad': 'Keep the requested id distinct from the returned count.',
                'wrap': False}]})
 
+
+# Part 2: Calculations and data (R3c)
+COURSE.append({'part': 2,
+ 'id': 'data-structure',
+ 'title': 'Calculations and data: structure',
+ 'summary': 'A pipeline, a flat buffer with a shape, and split/work/join.',
+ 'cards': [{'type': 'real',
+            'h': 'Describe work as a pipeline',
+            'p': 'Rayon adds parallel iterators: par_iter borrows items, map transforms and sum '
+                 'combines. Prefer item iteration when an index carries no meaning. Read-only '
+                 'helpers can accept slices so callers choose their storage. These crate excerpts '
+                 'are reading knowledge; exercises use std.\n'
+                 'zip(other) pairs items from two iterators, stopping when either ends.\n'
+                 'A closure parameter |(a, b)| destructures each pair.\n'
+                 'sum::<i32>() names the type to add up into, like parse::<i32>().',
+            'code': '//! use rayon::prelude::*;\n'
+                    '//! fn sum_of_squares(input: &[i32]) -> i32 {\n'
+                    '//!     input.par_iter()\n'
+                    '//!          .map(|i| i * i)\n'
+                    '//!          .sum()\n'
+                    '//! }',
+            'repo': 'rayon-rs/rayon',
+            'tag': 'v1.10.0',
+            'path': 'src/iter/mod.rs',
+            'lines': (14, 19),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'type': 'real',
+            'h': 'Separate storage from shape',
+            'p': 'ndarray separates storage, dimensions and strides (element steps along each '
+                 'axis). Owned dense arrays can use one flat buffer; views can borrow data and '
+                 'need not be contiguous. In row-major layout whole rows are adjacent; in '
+                 'column-major layout whole columns are adjacent. Validate buffer length and '
+                 'coordinates in a grid API. Our exercises model only dense grids.\n'
+                 'vec![value; n] creates a Vec of n repeated elements.\n'
+                 '[value; n] creates a fixed-size array of n repeated elements.',
+            'code': 'pub struct ArrayBase<S, D>\n'
+                    'where S: RawData\n'
+                    '{\n'
+                    '    /// Data buffer / ownership information. (If owned, contains the data\n'
+                    '    /// buffer; if borrowed, contains the lifetime and mutability.)\n'
+                    '    data: S,\n'
+                    '    /// A non-null pointer into the buffer held by `data`; may point '
+                    'anywhere\n'
+                    '    /// in its range. If `S: Data`, this pointer must be aligned.\n'
+                    '    ptr: std::ptr::NonNull<S::Elem>,\n'
+                    '    /// The lengths of the axes.\n'
+                    '    dim: D,\n'
+                    '    /// The element count stride per axis. To be parsed as `isize`.\n'
+                    '    strides: D,\n'
+                    '}',
+            'repo': 'rust-ndarray/ndarray',
+            'tag': '0.16.1',
+            'path': 'src/lib.rs',
+            'lines': (1280, 1293),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'type': 'real',
+            'h': 'Split ownership of the work',
+            'p': 'Rayon splits a mutable slice into disjoint producers; workers can mutate their '
+                 'own regions independently.\n'
+                 'split_at_mut(n) returns two non-overlapping mutable slices.\n'
+                 'let (left, right) = pair binds both parts of a pair.\n'
+                 'iter_mut() yields mutable references to items.',
+            'code': '    fn split_at(self, index: usize) -> (Self, Self) {\n'
+                    '        let (left, right) = self.slice.split_at_mut(index);\n'
+                    '        (\n'
+                    '            IterMutProducer { slice: left },\n'
+                    '            IterMutProducer { slice: right },\n'
+                    '        )\n'
+                    '    }',
+            'repo': 'rayon-rs/rayon',
+            'tag': 'v1.10.0',
+            'path': 'src/slice/mod.rs',
+            'lines': (983, 989),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'h': 'Group samples into batches',
+            'p': 'Batch boundaries belong in the data pipeline rather than in scattered index '
+                 'arithmetic.\n'
+                 'chunks(n) visits groups of at most n borrowed items.\n'
+                 'count() consumes an iterator and counts its items.\n'
+                 'for x in [a, b] moves or copies array elements into x.',
+            'code': 'let readings = [7, 8, 9, 10];\n'
+                    'for group in readings.chunks(2) {\n'
+                    '    let sum: i32 = group.iter().sum();\n'
+                    '    println!("{sum}");\n'
+                    '}',
+            'note': None},
+           {'h': 'Borrow locally, then join',
+            'p': 'std::thread::scope(|s| { ... }) waits for its workers, allowing them to borrow '
+                 'local data.\n'
+                 's.spawn(closure) starts a worker in that scope; join() waits and returns its '
+                 'Result, as with ordinary spawn.\n'
+                 'A move closure transfers captured values, including slice references. Ordinary '
+                 'spawn cannot borrow a short-lived local value just because its caller joins '
+                 'later. Rayon schedules on a worker pool; these std exercises create OS threads.',
+            'code': 'let samples = vec![9, 11];\n'
+                    'std::thread::scope(|s| {\n'
+                    '    let task = s.spawn(|| samples.len());\n'
+                    '    println!("{}", task.join().unwrap());\n'
+                    '});',
+            'note': None}],
+ 'problems': [{'type': 'smell',
+               'prompt': 'Which line uses an index only to read each sample?',
+               'code': 'fn main() {\n'
+                       '    let samples = [2, 5, 9];\n'
+                       '    let mut total = 0;\n'
+                       '    for i in 0..samples.len() {\n'
+                       '        total += samples[i];\n'
+                       '    }\n'
+                       '    println!("{total}");\n'
+                       '}',
+               'line': 4,
+               'lint': 'clippy::needless_range_loop',
+               'fixed': 'fn main() {\n'
+                        '    let samples = [2, 5, 9];\n'
+                        '    let mut total = 0;\n'
+                        '    for sample in &samples {\n'
+                        '        total += sample;\n'
+                        '    }\n'
+                        '    println!("{total}");\n'
+                        '}',
+               'good': 'The index adds no information. Iterate over samples directly.',
+               'bad': 'Look for the range used only to fetch an item.',
+               'wrap': False},
+              {'type': 'fill',
+               'prompt': 'Pair each observed value with its matching baseline, then sum the '
+                         'differences.',
+               'code': 'let observed = [8, 12, 17];\n'
+                       'let baseline = [3, 5, 7];\n'
+                       'let delta: i32 = observed.iter()\n'
+                       '    .__(baseline.iter())\n'
+                       '    .map(|(now, base)| now - base).sum();\n'
+                       'println!("{delta}");',
+               'bank': ['zip', 'chain', 'map'],
+               'answer': ['zip'],
+               'good': 'zip aligns the observations and baselines by position. The differences are '
+                       '5, 7 and 10.',
+               'bad': 'The map closure needs a pair, not a single reading.',
+               'output': ['22'],
+               'wrap': True},
+              {'type': 'fill',
+               'prompt': 'This grid stores complete columns consecutively. Read row 1, column 2.',
+               'code': 'struct Grid {\n'
+                       '    data: Vec<i32>,\n'
+                       '    rows: usize,\n'
+                       '}\n'
+                       'impl Grid {\n'
+                       '    fn at(&self, r: usize, c: usize) -> i32 {\n'
+                       '        self.data[__]\n'
+                       '    }\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    let g = Grid {\n'
+                       '        data: vec![2, 4, 6, 8, 10, 12],\n'
+                       '        rows: 2,\n'
+                       '    };\n'
+                       '    println!("{}", g.at(1, 2));\n'
+                       '}',
+               'bank': ['r + c', 'c * self.rows + r', 'r * self.rows + c'],
+               'answer': ['c * self.rows + r'],
+               'good': 'Each complete column has two rows. Skip two columns, then one row: offset '
+                       '5 contains 12.',
+               'bad': 'Which dimension is the length of one stored column?',
+               'output': ['12'],
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'The constructor checks buffer length. Which shape is accepted?',
+               'code': 'fn fits(rows: usize, cols: usize,\n'
+                       '        data: &[i32]) -> bool {\n'
+                       '    rows * cols == data.len()\n'
+                       '}\n'
+                       'let data = [1, 2, 3, 4, 5, 6];\n'
+                       'println!("{}", fits(2, 3, &data));\n'
+                       'println!("{}", fits(3, 3, &data));',
+               'bank': ['true', 'false'],
+               'answer': ['true', 'false'],
+               'good': 'Six cells fit 2 by 3, but not 3 by 3. Real untrusted dimensions also need '
+                       'checked multiplication.',
+               'bad': 'Compare rows times columns with the stored length.',
+               'wrap': True},
+              {'type': 'better',
+               'prompt': 'Both build the same dense grid. A numerical kernel will scan millions of '
+                         'cells repeatedly. Which representation would you keep?',
+               'a': 'struct Grid {\n'
+                    '    data: Vec<i32>,\n'
+                    '    rows: usize,\n'
+                    '    cols: usize,\n'
+                    '}\n'
+                    'let grid = Grid {\n'
+                    '    data: vec![0; 6], rows: 2, cols: 3,\n'
+                    '};\n'
+                    'println!("{}", grid.rows * grid.cols);\n'
+                    'let total: i32 = grid.data.iter().sum();\n'
+                    'println!("{total}");',
+               'b': 'let mut grid = Vec::new();\n'
+                    'for _ in 0..2 {\n'
+                    '    grid.push(vec![0; 3]);\n'
+                    '}\n'
+                    'let cells = grid.len() * grid[0].len();\n'
+                    'println!("{cells}");\n'
+                    'let total: i32 = grid.iter()\n'
+                    '    .map(|row| row.iter().sum::<i32>())\n'
+                    '    .sum();\n'
+                    'println!("{total}");',
+               'answer': 'a',
+               'lint': None,
+               'good': 'The flat buffer keeps dense storage together and shape separate. Nested '
+                       'rows permit independent lengths and allocations this workload does not '
+                       'need. This is a layout judgement, not a timing result.',
+               'bad': 'Judge the layout for the stated dense workload, not just the six-cell '
+                      'demonstration.',
+               'wrap': True},
+              {'type': 'output',
+               'prompt': 'How many batch results are produced, and what is their sum?',
+               'code': 'let data = [1, 2, 3, 4, 5, 6, 7];\n'
+                       'let batches = data.chunks(3).count();\n'
+                       'let total: i32 = data.chunks(3)\n'
+                       '    .map(|b| b.iter().sum::<i32>())\n'
+                       '    .sum();\n'
+                       'println!("{batches}");\n'
+                       'println!("{total}");',
+               'bank': ['2', '3', '6', '21', '28'],
+               'answer': ['3', '28'],
+               'good': 'The groups contain 3, 3 and 1 items. Their sums still cover every input '
+                       'value.',
+               'bad': 'Count groups, then account for all seven readings.',
+               'wrap': True},
+              {'type': 'error',
+               'prompt': 'This ordinary spawn borrows local input. Which line is rejected?',
+               'code': 'use std::thread;\n'
+                       'fn main() {\n'
+                       '    let data = vec![2, 4];\n'
+                       '    let job = thread::spawn(|| data.len());\n'
+                       '    println!("{}", job.join().unwrap());\n'
+                       '}',
+               'line': 4,
+               'error_code': 'E0373',
+               'good': 'Ordinary spawn may outlive data. Use a scoped worker to borrow local '
+                       'input, or transfer ownership when appropriate.',
+               'bad': 'Joining later does not change the lifetime required by ordinary spawn.',
+               'wrap': False},
+              {'type': 'order',
+               'prompt': 'Split exclusive chunks, run and join a worker, then combine. Print 16.',
+               'head': ['fn bump(xs: &mut [i32]) -> i32 {',
+                        '    for x in xs.iter_mut() { *x += 1; }',
+                        '    xs.iter().sum()',
+                        '}',
+                        'fn main() {',
+                        '    let mut data = [2, 3, 4, 5];',
+                        '    std::thread::scope(|s| {'],
+               'pool': ['        let (a, b) = data.split_at_mut(2);',
+                        '        let job = s.spawn(move || bump(a));',
+                        '        let left = job.join().unwrap();',
+                        '        let total = left + b[0] + b[1];'],
+               'tail': ['        println!("{total}");', '    });', '}'],
+               'output': ['16'],
+               'good': 'The worker changes only its exclusive left chunk. Joining yields 7; the '
+                       'untouched right chunk contributes 9.',
+               'bad': 'Create each binding before the next stage uses it.'}]})
+
+COURSE.append({'part': 2,
+ 'id': 'data-rules',
+ 'title': 'Calculations and data: rules',
+ 'summary': 'Reuse storage, constrain numbers, isolate workers, and choose arithmetic '
+            'deliberately.',
+ 'cards': [{'type': 'real',
+            'h': 'Write into existing storage',
+            'p': 'mapv_inplace replaces values in the existing array. A hot-loop kernel can '
+                 'similarly write into a caller-owned mutable output slice, keeping storage '
+                 'ownership outside repeated work.\n'
+                 'enumerate() pairs each iterator item with its zero-based index; (i, value) '
+                 'destructures that pair. Measure a representative workload with a benchmark '
+                 'before optimizing; the exercises establish behavior, not speed.',
+            'code': '    pub fn mapv_inplace<F>(&mut self, mut f: F)\n'
+                    '    where\n'
+                    '        S: DataMut,\n'
+                    '        F: FnMut(A) -> A,\n'
+                    '        A: Clone,\n'
+                    '    {\n'
+                    '        self.map_inplace(move |x| *x = f(x.clone()));\n'
+                    '    }',
+            'repo': 'rust-ndarray/ndarray',
+            'tag': '0.16.1',
+            'path': 'src/impl_methods.rs',
+            'lines': (2887, 2894),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'h': 'Reserve once, reuse many times',
+            'p': 'Keep scratch storage outside repeated work when each iteration needs a temporary '
+                 'sequence.\n'
+                 'Vec::with_capacity(n) reserves room for at least n items without adding any.\n'
+                 'clear() removes items while retaining that room.\n'
+                 'capacity() reports the reserved room; len() reports actual items.',
+            'code': 'let scratch: Vec<f64> =\n'
+                    '    Vec::with_capacity(12);\n'
+                    'println!("{}", scratch.len());',
+            'note': None},
+           {'type': 'real',
+            'h': 'State the numeric operations you need',
+            'p': 'ndarray states the capabilities required of its element type instead of fixing '
+                 'f64.\n'
+                 'where puts bounds after the signature.\n'
+                 'Add<Output = A> promises addition returning A.\n'
+                 '+ joins trait requirements. Read the body of your helper to decide which '
+                 'capabilities it needs.',
+            'code': '    pub fn sum(&self) -> A\n'
+                    '    where A: Clone + Add<Output = A> + num_traits::Zero\n'
+                    '    {',
+            'repo': 'rust-ndarray/ndarray',
+            'tag': '0.16.1',
+            'path': 'src/numeric/impl_numeric.rs',
+            'lines': (33, 35),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'type': 'real',
+            'h': 'Combine results after independent work',
+            'p': 'Rayon executes left and right work, then reduces the two results. join_context '
+                 'is public (re-exported from rayon_core); its closures receive scheduling '
+                 'context. For independent batches, workers can return results instead of sharing '
+                 'a mutable results collection. Regrouping floating-point addition may change '
+                 'rounding, so a parallel sum need not equal a sequential sum bit for bit.\n'
+                 'The slice range [..] borrows the whole sequence.',
+            'code': '            let (left_result, right_result) = join_context(\n'
+                    '                |context| {\n'
+                    '                    helper(\n'
+                    '                        mid,\n'
+                    '                        context.migrated(),\n'
+                    '                        splitter,\n'
+                    '                        left_producer,\n'
+                    '                        left_consumer,\n'
+                    '                    )\n'
+                    '                },\n'
+                    '                |context| {\n'
+                    '                    helper(\n'
+                    '                        len - mid,\n'
+                    '                        context.migrated(),\n'
+                    '                        splitter,\n'
+                    '                        right_producer,\n'
+                    '                        right_consumer,\n'
+                    '                    )\n'
+                    '                },\n'
+                    '            );\n'
+                    '            reducer.reduce(left_result, right_result)',
+            'repo': 'rayon-rs/rayon',
+            'tag': 'v1.10.0',
+            'path': 'src/iter/plumbing/mod.rs',
+            'lines': (415, 435),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'h': 'Choose arithmetic deliberately',
+            'p': 'Choose integer or floating-point arithmetic to match the quantity. Floating '
+                 'point cannot represent every large integer exactly.\n'
+                 'u8 is an unsigned 8-bit integer (0..255); 254_u8 fixes a literal’s type.\n'
+                 'u64 is an unsigned 64-bit integer; 10_u64 fixes that type.\n'
+                 'x as u64 turns a float into an integer, dropping the fraction.\n'
+                 'wrapping_add deliberately wraps modulo the integer type’s range. Checked '
+                 'arithmetic is appropriate when overflow must be reported instead.',
+            'code': 'let tick = 255_u8;\nprintln!("{}", tick.wrapping_add(2));',
+            'note': None}],
+ 'problems': [{'type': 'better',
+               'prompt': 'Both normalize every row and combine the results. For a stream of many '
+                         'rows, which would you ask for in a hot loop?',
+               'a': 'let rows = [[2, 4, 6]; 1000];\n'
+                    'let mut total = 0;\n'
+                    'for row in &rows {\n'
+                    '    let normalized: Vec<i32> = row.iter()\n'
+                    '        .map(|n| n - row[0]).collect();\n'
+                    '    let sum: i32 =\n'
+                    '        normalized.iter().sum();\n'
+                    '    total += sum;\n'
+                    '}\n'
+                    'println!("{total}");',
+               'b': 'let rows = [[2, 4, 6]; 1000];\n'
+                    'let mut scratch = Vec::with_capacity(3);\n'
+                    'let mut total = 0;\n'
+                    'for row in &rows {\n'
+                    '    scratch.clear();\n'
+                    '    for n in row {\n'
+                    '        scratch.push(n - row[0]);\n'
+                    '    }\n'
+                    '    total += scratch.iter().sum::<i32>();\n'
+                    '}\n'
+                    'println!("{total}");',
+               'answer': 'b',
+               'lint': None,
+               'good': 'The reusable buffer avoids creating a new Vec for every row. Both '
+                       'normalize relative to the first cell and print 6000. Benchmark before '
+                       'claiming a speed improvement.',
+               'bad': 'Consider storage lifetime across the whole stream, not just one tiny row.',
+               'wrap': True},
+              {'type': 'fill',
+               'prompt': 'Complete the bounds for a borrowed generic sum, using the caller’s zero '
+                         'value.',
+               'code': 'use std::ops::Add;\n'
+                       'fn total<T: __>(xs: &[T], zero: T) -> T {\n'
+                       '    let mut acc = zero;\n'
+                       '    for x in xs {\n'
+                       '        acc = acc + *x;\n'
+                       '    }\n'
+                       '    acc\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    println!("{}", total(&[3, 7], 0));\n'
+                       '    let xs = [0.5, 2.0];\n'
+                       '    println!("{}", total(&xs, 0.0));\n'
+                       '}',
+               'bank': ['Add<Output = T>', 'Copy', 'Add<Output = T> + Copy'],
+               'answer': ['Add<Output = T> + Copy'],
+               'good': 'The loop both adds T values and copies them out of a shared reference. '
+                       'Both promises are required.',
+               'bad': 'Inspect both the + operation and the *x read.',
+               'output': ['10', '2.5'],
+               'wrap': False},
+              {'type': 'error',
+               'prompt': 'Both workers try to take the same mutable slice. Which line reuses its '
+                         'moved exclusive reference?',
+               'code': 'fn main() {\n'
+                       '    let mut data = [1, 2];\n'
+                       '    let chunk = &mut data[..];\n'
+                       '    std::thread::scope(|s| {\n'
+                       '        s.spawn(move || chunk[0] += 1);\n'
+                       '        s.spawn(move || chunk[1] += 1);\n'
+                       '    });\n'
+                       '}',
+               'line': 6,
+               'error_code': 'E0382',
+               'good': 'A mutable reference is not Copy. Split the slice into disjoint mutable '
+                       'regions before spawning.',
+               'bad': 'Different index expressions do not split ownership of the captured '
+                      'reference.',
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'This byte counter intentionally cycles modulo 256. What prints?',
+               'code': 'let tick = 254_u8;\n'
+                       'println!("{}", tick.wrapping_add(3));\n'
+                       'println!("{}", tick.wrapping_add(4));',
+               'bank': ['0', '1', '2', '255', "won't compile"],
+               'answer': ['1', '2'],
+               'good': 'Wrapping is an explicit arithmetic policy: 257 mod 256 is 1, then 258 mod '
+                       '256 is 2.',
+               'bad': 'Start each addition from 254, not from the previous result.',
+               'wrap': True},
+              {'type': 'fill',
+               'prompt': 'Reserve space for all four outputs before pushing. Print their count.',
+               'code': 'let input = [2, 3, 5, 7];\n'
+                       'let mut output = Vec::with_capacity(__);\n'
+                       'println!("{}", output.capacity() >= 4);\n'
+                       'for n in input {\n'
+                       '    output.push(n * 2);\n'
+                       '}\n'
+                       'println!("{}", output.len());',
+               'bank': ['input.len()', '0', '1'],
+               'answer': ['input.len()'],
+               'good': 'Reservation covers all four pushes. Capacity is at least the requested '
+                       'size; it is not the length.',
+               'bad': 'Check the reserved room before pushing: later growth could conceal an '
+                      'insufficient reservation.',
+               'output': ['true', '4'],
+               'wrap': True},
+              {'type': 'order',
+               'prompt': 'Write into caller-owned output, then consume it. Print 6.',
+               'head': ['fn write(src: &[i32], dst: &mut [i32]) {',
+                        '    for (i, n) in src.iter().enumerate() {',
+                        '        dst[i] = n * 2;',
+                        '    }',
+                        '}',
+                        'fn main() {'],
+               'pool': ['    let mut dst = [0; 2];',
+                        '    write(&[1, 2], &mut dst);',
+                        '    let total: i32 = dst.iter().sum();'],
+               'tail': ['    println!("{total}");', '}'],
+               'output': ['6'],
+               'good': 'The helper fills existing storage before the caller sums it.',
+               'bad': 'Summing before writing reads zeros.'},
+              {'type': 'better',
+               'prompt': 'An AI ported this from JavaScript, where every number is a float. '
+                         'Both report how many complete pairs fit in a count. Which would you '
+                         'keep?',
+               'a': 'fn pairs(n: u64) -> u64 {\n'
+                    '    (n as f64 / 2.0) as u64\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    println!("{}", pairs(10_u64));\n'
+                    '    println!("{}", pairs(11_u64));\n'
+                    '}',
+               'b': 'fn pairs(n: u64) -> u64 {\n'
+                    '    n / 2\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    println!("{}", pairs(10_u64));\n'
+                    '    println!("{}", pairs(11_u64));\n'
+                    '}',
+               'answer': 'b',
+               'lint': None,
+               'good': 'Complete-pair counts are integers. Converting a large count to f64 can '
+                       'round it before division; the integer calculation preserves the counting '
+                       'policy.',
+               'bad': 'Passing the small examples does not establish correctness for large counts.',
+               'wrap': False},
+              {'type': 'better',
+               'prompt': 'Both combine scores from independent batches into one final number. '
+                         'Which worker boundary would you keep as this calculation grows?',
+               'a': 'fn score(xs: &[i32]) -> i32 {\n'
+                    '    xs.iter().map(|x| x * x).sum()\n'
+                    '}\n'
+                    'std::thread::scope(|s| {\n'
+                    '    let a = s.spawn(|| score(&[1, 2]));\n'
+                    '    let b = s.spawn(|| score(&[3, 4]));\n'
+                    '    let total = a.join().unwrap()\n'
+                    '        + b.join().unwrap();\n'
+                    '    println!("{total}");\n'
+                    '});',
+               'b': 'use std::sync::{Arc, Mutex};\n'
+                    'fn score(xs: &[i32]) -> i32 {\n'
+                    '    xs.iter().map(|x| x * x).sum()\n'
+                    '}\n'
+                    'let results =\n'
+                    '    Arc::new(Mutex::new(Vec::new()));\n'
+                    'std::thread::scope(|s| {\n'
+                    '    let batches =\n'
+                    '        [vec![1, 2], vec![3, 4]];\n'
+                    '    for batch in batches {\n'
+                    '        let out = Arc::clone(&results);\n'
+                    '        s.spawn(move || {\n'
+                    '            let value = score(&batch);\n'
+                    '            let mut guard =\n'
+                    '                out.lock().unwrap();\n'
+                    '            guard.push(value);\n'
+                    '        });\n'
+                    '    }\n'
+                    '});\n'
+                    'let total: i32 = results.lock().unwrap()\n'
+                    '    .iter().sum();\n'
+                    'println!("{total}");',
+               'answer': 'a',
+               'lint': None,
+               'good': 'Returning independent partial results expresses this calculation without a '
+                       'shared mutable collector. The alternative computes locally but still '
+                       'coordinates result delivery through a lock. Both print 30.',
+               'bad': 'Only the combined number is needed; choose the worker interface around that '
+                      'result.',
+               'wrap': True}]})
+
 COURSE.append({
     'part': 3,
     'id': 'smells',
