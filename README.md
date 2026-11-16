@@ -89,7 +89,7 @@ you're offline it waits until you're back online.
 Lesson 16, "Fix the compiler", adapts puzzles from Akira Nishikawa's Rust Compile Challenge
 (MIT license, © 2021 Akira Nishikawa): translated, shortened, and turned into tap-to-answer problems.
 
-"Clippy's top smells" quotes [Rayon v1.10.0, src/slice/mod.rs, lines 203–208](https://github.com/rayon-rs/rayon/blob/v1.10.0/src/slice/mod.rs#L203-L208),
+"Fighting the borrow checker the wrong way" quotes [Rayon v1.10.0, src/slice/mod.rs, lines 203–208](https://github.com/rayon-rs/rayon/blob/v1.10.0/src/slice/mod.rs#L203-L208),
 under the MIT license, © 2010 The Rust Project Developers. The snippet was checked against
 that tag's raw file. The [MIT notice](licenses/rayon-MIT.txt) is included with this app.
 

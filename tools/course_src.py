@@ -2806,45 +2806,1307 @@ fn main() {
     ],
 })
 
-# R1 sample: later content jobs insert lessons before this review lesson.
-_SMELLY = '''
-fn first(values: &Vec<i32>) -> i32 {
+# Part 3: R2/R3 insert lessons before this block; keep review ids stable.
+# Cards introduce extra APIs with different examples from the problems.
+
+# Part 3 / 31
+COURSE.append({
+    'part': 3,
+    'id': 'smells',
+    'title': "Clippy's top smells",
+    'summary': 'Working code can still ask for too much. Let Clippy help.',
+    "cards": [
+        card(
+            h='Read what the code promises',
+            p='Rust checks types and borrowing; Clippy flags suspicious patterns in working code. Read a function signature and its callers before accepting a warning. The example uses contains, a collection method that returns a bool for membership.',
+            code='''let colors = ["red", "blue"];
+let found = colors.contains(&"red");
+println!("{found}");''',
+            note='A lint is evidence about one pattern, not proof that the whole design is right.',
+        ),
+        card(
+            h='Copies and panics need a reason',
+            p='Clone when an independent value is needed. Unwrap is appropriate only when an invariant proves success. get returns an Option instead of panicking for a missing index; a caller can then decide what failure means. parse turns text into a requested type and returns a Result: invalid input gives Err. parse::<u32>() chooses u32 explicitly; parse() can infer the type from context. String::push appends one character.',
+            code='''let sizes = [10, 20];
+let requested = sizes.get(5);
+println!("{requested:?}");''',
+            note='Judgement calls compare stated requirements. Equal output on one valid input does not check the failure policy.',
+        ),
+    ],
+    "problems": [
+        smell(
+            prompt='Which line asks for a vector when a slice would do?',
+            code='''fn first(values: &Vec<i32>) -> i32 {
     values[0]
 }
 
 fn main() {
     let values = vec![7, 8];
     println!("{}", first(&values));
-}'''
-_FIXED = _SMELLY.replace("&Vec<i32>", "&[i32]")
+}''',
+            line=1,
+            lint='clippy::ptr_arg',
+            fixed='''fn first(values: &[i32]) -> i32 {
+    values[0]
+}
+
+fn main() {
+    let values = vec![7, 8];
+    println!("{}", first(&values));
+}''',
+            good='`&[i32]` accepts a borrowed view. This function only reads a number; it needs no vector methods.',
+            bad='Look at the parameter type. Does it need a whole vector?',
+            wrap=False,
+        ),
+        better(
+            prompt='A caller owns a list of words but only wants to read the number of words. Which API avoids transferring or copying ownership?',
+            a='''fn count(words: Vec<String>) -> usize {
+    words.len()
+}
+fn main() {
+    let words = vec![String::from("fern")];
+    println!("{}", count(words.clone()));
+    println!("{}", words.len());
+}''',
+            b='''fn count(words: &[String]) -> usize {
+    words.len()
+}
+fn main() {
+    let words = vec![String::from("fern")];
+    println!("{}", count(&words));
+    println!("{}", words.len());
+}''',
+            answer='b',
+            lint=None,
+            good='The slice contract reads existing words; the owned-vector contract makes this caller clone all of them just to count. Unlike the first puzzle, this is an ownership decision, not a &Vec lint.',
+            bad='Does counting consume the words?',
+            wrap=False,
+        ),
+        smell(
+            prompt='Which line unnecessarily requires an owned string type?',
+            code='''fn width(text: &String) -> usize {
+    text.len()
+}
+fn main() {
+    let text = String::from("rust");
+    println!("{}", width(&text));
+}''',
+            line=1,
+            lint='clippy::ptr_arg',
+            fixed='''fn width(text: &str) -> usize {
+    text.len()
+}
+fn main() {
+    let text = String::from("rust");
+    println!("{}", width(&text));
+}''',
+            good='Reading bytes needs only &str, which also accepts string literals.',
+            bad='Look at what width actually does with its argument.',
+            wrap=False,
+        ),
+        smell(
+            prompt='Which line manually compares a boolean to true?',
+            code='''let ready = true;
+println!("{}", ready == true);''',
+            line=2,
+            lint='clippy::bool_comparison',
+            fixed='''let ready = true;
+println!("{ready}");''',
+            good='ready already is the answer: a bool.',
+            bad='Which expression compares a bool with another bool?',
+            wrap=True,
+        ),
+        smell(
+            prompt='Which line spells out a boolean result with branches?',
+            code='''fn allowed(n: i32) -> bool {
+    if n > 0 {
+        true
+    } else {
+        false
+    }
+}
+fn main() {
+    println!("{}", allowed(2));
+}''',
+            line=2,
+            lint='clippy::needless_bool',
+            fixed='''fn allowed(n: i32) -> bool {
+    n > 0
+}
+fn main() {
+    println!("{}", allowed(2));
+}''',
+            good='The comparison itself returns bool; no branches are needed.',
+            bad='Which line turns a bool into the same bool?',
+            wrap=False,
+        ),
+        better(
+            prompt='User input may be invalid. Which version reports that rather than panicking?',
+            a='''fn main() {
+    let input = "12";
+    match input.parse::<u32>() {
+        Ok(n) => println!("{n}"),
+        Err(_) => println!("invalid number"),
+    }
+}''',
+            b='''fn main() {
+    let input = "12";
+    let n = input.parse::<u32>().unwrap();
+    println!("{n}");
+}''',
+            answer='a',
+            lint=None,
+            good='A has a failure branch. The sample input succeeds in both; try thinking about oops as input.',
+            bad='One successful example does not justify assuming every input parses.',
+            wrap=False,
+        ),
+        better(
+            prompt='The caller needs the original after a read-only check. Which avoids allocating a copy?',
+            a='''fn main() {
+    let text = String::from("rust");
+    println!("{}", text.len());
+    println!("{text}");
+}''',
+            b='''fn main() {
+    let text = String::from("rust");
+    let copy = text.clone();
+    println!("{}", copy.len());
+    println!("{text}");
+}''',
+            answer='a',
+            lint=None,
+            good='len borrows text; no independent String is needed.',
+            bad='Does measuring text consume or change it?',
+            wrap=False,
+        ),
+        fill(
+            prompt='Preserve the failure from validate instead of unwrapping or replacing it. Which operator lets the caller receive Err?',
+            code='''fn validate(
+    n: i32,
+) -> Result<i32, &'static str> {
+    if n < 0 {
+        Err("negative")
+    } else {
+        Ok(n)
+    }
+}
+fn doubled(
+    n: i32,
+) -> Result<i32, &'static str> {
+    let valid = validate(n)__;
+    Ok(valid * 2)
+}
+fn main() {
+    println!("{:?}", doubled(-1));
+}''',
+            bank=['?', '.unwrap()', '.unwrap_or(0)', '.len()'],
+            answer=['?'],
+            good="? forwards the original Err to this function's caller; it does not convert a failure into a normal value or panic.",
+            bad='The caller must still receive the error, not a fallback result.',
+            output=['Err("negative")'],
+            wrap=False,
+        ),
+    ],
+})
+
+# Part 3 / 32
 COURSE.append({
-    "part": 3, "id": "smells", "title": "Clippy's top smells",
-    "summary": "Working code can still ask for too much. Let Clippy help.",
+    'part': 3,
+    'id': 'borrow-fights',
+    'title': 'Fighting the borrow checker the wrong way',
+    'summary': 'Shorten borrows and express ownership before adding copies or shared mutation.',
     "cards": [
-        card("Compiles is a start",
-             "Rust checks that code is safe to run. Clippy looks for ways to make it clearer. A warning is a clue to read the code, not a command to change it.",
-             _FIXED,
-             "`&[i32]` is a slice: a borrowed view of some numbers. It works with a vector or an array."),
-        real("Real code borrows slices",
-             "Rayon runs work in parallel. Here its slice method borrows a slice. It does not ask callers to own a vector.",
-             '''impl<T: Sync> ParallelSlice<T> for [T] {
+        card(
+            h='Shared ownership is a choice',
+            p='Rc shares ownership on one thread. RefCell<T> checks borrowing at runtime: borrow reads, borrow_mut writes, and conflicting live borrows panic. Rc<RefCell<T>> is useful when multiple owners really must mutate one value.',
+            code='''use std::cell::RefCell;
+let cells = RefCell::new(vec![1]);
+{
+    let mut edit = cells.borrow_mut();
+    edit.push(2);
+}
+println!("{:?}", cells.borrow());''',
+            note='A block ends the edit borrow before the read. A local value with one owner usually needs only mut; do not add sharing automatically.',
+        ),
+        card(
+            h='Find the last use of a borrow',
+            p='A borrow ends after its last use, which may be earlier than the end of the block. Trace uses in order before copying a collection to silence a borrow error.',
+            code='''let mut banner = String::from("hello");
+let view = &banner;
+println!("{view}");
+banner.push('!');
+println!("{banner}");''',
+            note='No borrowed view is read after the change here. Later problems need information to survive a change; decide exactly what information that is.',
+        ),
+        real(
+            h='Real code borrows slices',
+            p='Rayon runs work in parallel. Here its slice method borrows a slice. It does not ask callers to own a vector.',
+            code='''impl<T: Sync> ParallelSlice<T> for [T] {
     #[inline]
     fn as_parallel_slice(&self) -> &[T] {
         self
     }
 }''',
-             "rayon-rs/rayon", "v1.10.0", "src/slice/mod.rs", (203, 208), "MIT",
-             "`Sync` is a promise about sharing data between threads. This excerpt is for reading; it needs Rayon's crate to compile."),
+            repo='rayon-rs/rayon',
+            tag='v1.10.0',
+            path='src/slice/mod.rs',
+            lines=(203, 208),
+            license='MIT',
+            note="`Sync` means references to a value can be shared safely across threads. This excerpt is for reading; it needs Rayon's crate to compile. `impl<T: Sync> ParallelSlice<T> for [T]` implements the Rayon trait for slices whose element type T is Sync. `#[inline]` is an optional compiler hint to inline a function, not a promise or a correctness requirement.",
+            own=False,
+        ),
     ],
     "problems": [
-        smell("Which line asks for a vector when a slice would do?", _SMELLY,
-              1, "clippy::ptr_arg", _FIXED,
-              "`&[i32]` accepts a borrowed view. This function only reads a number; it needs no vector methods.",
-              "Look at the parameter type. Does it need a whole vector?"),
-        better("Which version accepts both vectors and arrays?", _SMELLY, _FIXED,
-               "b", "clippy::ptr_arg",
-               "B takes a slice. Both print 7, but B works with more callers.",
-               "Both run. Look for the parameter that asks for less."),
+        better(
+            prompt='Only count bytes, then print the original. Which API avoids cloning at the call?',
+            a='''fn size(s: &str) -> usize {
+    s.len()
+}
+fn main() {
+    let s = String::from("oak");
+    println!("{}", size(&s));
+    println!("{s}");
+}''',
+            b='''fn size(s: String) -> usize {
+    s.len()
+}
+fn main() {
+    let s = String::from("oak");
+    println!("{}", size(s.clone()));
+    println!("{s}");
+}''',
+            answer='a',
+            lint=None,
+            good='A expresses a read-only borrow. B forces the caller to copy merely to keep ownership.',
+            bad='Does size need ownership or only a view?',
+            wrap=False,
+        ),
+        better(
+            prompt='The caller will never use the original again. Which transfers ownership without a copy?',
+            a='''fn main() {
+    let s = String::from("oak");
+    let saved = s.clone();
+    println!("{saved}");
+}''',
+            b='''fn main() {
+    let s = String::from("oak");
+    let saved = s;
+    println!("{saved}");
+}''',
+            answer='b',
+            lint=None,
+            good='Moving the String transfers its allocation; cloning allocates another one unnecessarily here.',
+            bad='Is any later use of s required?',
+            wrap=False,
+        ),
+        better(
+            prompt='One local counter has one owner. Which avoids runtime borrow checks?',
+            a='''use std::cell::RefCell;
+use std::rc::Rc;
+fn main() {
+    let n = Rc::new(RefCell::new(0));
+    *n.borrow_mut() += 1;
+    println!("{}", n.borrow());
+}''',
+            b='''fn main() {
+    let mut n = 0;
+    n += 1;
+    println!("{n}");
+}''',
+            answer='b',
+            lint=None,
+            good='A single owner can use mut. Rc<RefCell<_>> adds sharing and runtime checks this requirement does not need.',
+            bad='How many independent owners need to mutate n?',
+            wrap=False,
+        ),
+        better(
+            prompt='Keep the first length while growing the vector. Which avoids copying its strings?',
+            a='''fn main() {
+    let mut words =
+        vec![String::from("oak")];
+    let first_len = words[0].len();
+    words.push(String::from("elm"));
+    println!(
+        "{} {}",
+        first_len,
+        words.len()
+    );
+}''',
+            b='''fn main() {
+    let mut words =
+        vec![String::from("oak")];
+    let snapshot = words.clone();
+    let first = &snapshot[0];
+    words.push(String::from("elm"));
+    println!(
+        "{} {}",
+        first.len(),
+        words.len()
+    );
+}''',
+            answer='a',
+            lint=None,
+            good='Only the length must survive the push; a usize is enough. Rust rejects retaining a reference into words across push when that reference is used afterward, because push may reallocate.',
+            bad='What is the smallest value the final print actually needs?',
+            wrap=False,
+        ),
+        better(
+            prompt='Change the first label in place. Which avoids cloning and replacing it?',
+            a='''fn main() {
+    let mut words =
+        vec![String::from("oak")];
+    words[0].push('!');
+    println!("{}", words[0]);
+}''',
+            b='''fn main() {
+    let mut words =
+        vec![String::from("oak")];
+    let mut first = words[0].clone();
+    first.push('!');
+    words[0] = first;
+    println!("{}", words[0]);
+}''',
+            answer='a',
+            lint=None,
+            good='The vector already permits mutation, so mutate the String directly.',
+            bad='Is there a second owner that needs the old text?',
+            wrap=False,
+        ),
+        better(
+            prompt='Both preserve the first label after replacing it in the list. Which snapshot copies only the label that must survive, rather than also copying unrelated labels?',
+            a='''fn main() {
+    let mut words = vec![
+        String::from("oak"),
+        String::from("pine"),
+    ];
+    let saved = words.clone();
+    words[0] = String::from("elm");
+    println!("{}", saved[0]);
+}''',
+            b='''fn main() {
+    let mut words = vec![
+        String::from("oak"),
+        String::from("pine"),
+    ];
+    let saved = words[0].clone();
+    words[0] = String::from("elm");
+    println!("{saved}");
+}''',
+            answer='b',
+            lint=None,
+            good='Both saved values are used after replacement and still print oak. Cloning only words[0] preserves the needed owned text; cloning the whole vector also allocates copies of pine and any other unrelated labels.',
+            bad='Inspect what is cloned and what is actually read after replacement.',
+            wrap=False,
+        ),
+        err(
+            prompt='Which line mutates the owner while a borrow is still needed?',
+            code='''fn main() {
+    let mut words =
+        vec![String::from("oak")];
+    let first = &words[0];
+    words.push(String::from("elm"));
+    println!("{first}");
+}''',
+            line=5,
+            error_code='E0502',
+            good='push needs an exclusive borrow, but first is still used afterward. Save a length or finish using first before push.',
+            bad='A push may reallocate the vector. Which line asks to change it?',
+        ),
+        out(
+            prompt='The else branch still uses first. Does that prevent the push on the other branch, and what is printed?',
+            code='''let mut words =
+    vec![String::from("oak")];
+let first = &words[0];
+let count = if first.len() > 2 {
+    words.push(String::from("elm"));
+    words.len()
+} else {
+    first.len()
+};
+println!("{count}");''',
+            bank=['2', '3', "won't compile"],
+            answer=['2'],
+            good='It compiles and prints 2. On the path with push, first is last read in the condition. The later read in else is on a path where push does not run.',
+            bad='Trace borrow uses on each branch separately.',
+            wrap=True,
+        ),
+    ],
+})
+
+# Part 3 / 33
+COURSE.append({
+    'part': 3,
+    'id': 'structure-smells',
+    'title': 'Structure smells',
+    'summary': 'Review responsibilities, types, dispatch and lock scope against a concrete need.',
+    "cards": [
+        card(
+            h='Trace responsibilities and dependencies',
+            p='A god struct gathers unrelated reasons to change. Ask which fields each operation actually needs. Small modules should let callers use one responsibility without constructing unrelated application state. format! builds a String rather than printing it.',
+            code='''let row = format!("item {}", 7);
+println!("{row}");''',
+            note='For a closed vocabulary use an enum; a newtype gives a primitive value a distinct type: `struct Depth(u32)` wraps a u32, accessed as `.0`. Review these choices against the requested contract, not a rule to split everything. `type Label = String` introduces an alternate name for an existing type. `()` is the unit value/type: it carries no data.',
+        ),
+        card(
+            h='Choose when the concrete type is known',
+            p='dyn Trait hides a concrete implementation behind a trait interface and dispatches at runtime. Box<dyn Trait> owns such a value on the heap. Generics keep a concrete type chosen at compile time; an enum describes a closed set of alternatives.',
+            code='''trait Sound {
+    fn sound(&self) -> &str;
+}
+struct Bell;
+impl Sound for Bell {
+    fn sound(&self) -> &str {
+        "ding"
+    }
+}
+let bell: Box<dyn Sound> =
+    Box::new(Bell);
+println!("{}", bell.sound());''',
+            note='Runtime heterogeneity can justify dyn. Neither dyn nor generics is always the better design.',
+        ),
+        card(
+            h='A lock lasts as long as its guard',
+            p='A Mutex guard releases its lock when its scope ends. drop(value) ends ownership immediately, so drop(guard) releases a lock early. Keep a read-modify-write transaction under one guard when atomicity matters.',
+            code='''use std::sync::Mutex;
+let gate = Mutex::new(false);
+let mut guard = gate.lock().unwrap();
+*guard = true;
+drop(guard);
+println!("{}", gate.lock().unwrap());''',
+            note='Locking the same Mutex twice on the same thread while its first guard is live may deadlock or panic; std leaves the behavior unspecified. Choose guard scope deliberately; shortening it is not always correct.',
+        ),
+        card(
+            h='Async review: not executed here',
+            p='Async Rust needs a runtime outside these std-only exercises. Blocking I/O or thread sleep on an executor thread can stall other tasks. Use runtime async APIs or its blocking-work facility. A guard held across .await can block peers or deadlock; take a snapshot first only if the operation allows stale state.',
+            code='''// Review questions for async code:
+// Where can this operation suspend?
+// Is a lock guard still live there?
+// Does the API block its calling thread?''',
+            note='These async claims are reading guidance, not compiled async examples or checked scheduling behavior.',
+        ),
+    ],
+    "problems": [
+        better(
+            prompt='Both purchase flows record one audit entry. Which design also lets a quote screen reuse pricing without creating or mutating audit storage?',
+            a='''struct Shop {
+    rate: i32,
+    audit: Vec<i32>,
+}
+impl Shop {
+    fn estimate(
+        &mut self,
+        units: i32,
+    ) -> i32 {
+        let total = self.rate * units;
+        self.audit.push(total);
+        total
+    }
+    fn buy(&mut self, units: i32) -> i32 {
+        self.estimate(units)
+    }
+}
+fn main() {
+    let mut shop = Shop {
+        rate: 3,
+        audit: vec![],
+    };
+    println!("{}", shop.buy(2));
+    println!("{}", shop.audit.len());
+}''',
+            b='''fn price(rate: i32, units: i32) -> i32 {
+    rate * units
+}
+struct Shop {
+    rate: i32,
+    audit: Vec<i32>,
+}
+impl Shop {
+    fn buy(&mut self, units: i32) -> i32 {
+        let total = price(self.rate, units);
+        self.audit.push(total);
+        total
+    }
+}
+fn main() {
+    let mut shop = Shop {
+        rate: 3,
+        audit: vec![],
+    };
+    println!("{}", shop.buy(2));
+    println!("{}", shop.audit.len());
+}''',
+            answer='b',
+            lint=None,
+            good='Both preserve purchases and audit history. The plain price function needs no audit store; Shop::buy records the purchase. The combined estimate in the other design records an entry even when reused just to show a quote.',
+            bad='Follow what happens if a quote screen calls estimate but never buys.',
+            wrap=False,
+        ),
+        better(
+            prompt='Both run the built-in command. Outside crates will add commands with new behavior. Which host API supports those implementations without editing the host?',
+            a='''pub trait Command {
+    fn run(&self) -> i32;
+}
+struct Builtin;
+impl Command for Builtin {
+    fn run(&self) -> i32 {
+        7
+    }
+}
+pub fn execute(
+    cmd: Box<dyn Command>,
+) -> i32 {
+    cmd.run()
+}
+fn main() {
+    println!(
+        "{}",
+        execute(Box::new(Builtin))
+    );
+}''',
+            b='''pub enum Command {
+    Builtin,
+}
+pub fn execute(cmd: Command) -> i32 {
+    match cmd {
+        Command::Builtin => 7,
+    }
+}
+fn main() {
+    println!(
+        "{}",
+        execute(Command::Builtin)
+    );
+}''',
+            answer='a',
+            lint=None,
+            good='An extension can implement the public Command trait and pass its own boxed type to execute. An outside crate cannot add a variant to the host enum. The enum is a reasonable closed-world prototype, but this requirement has an open implementation set.',
+            bad='Imagine adding a third-party command whose run method performs entirely different work.',
+            wrap=False,
+        ),
+        better(
+            prompt='Both print two numbers. Another caller needs to print a text label and a numeric count without converting them to owned strings. Which signature supports that caller?',
+            a='''use std::fmt::Display;
+fn show<L: Display, R: Display>(
+    left: L,
+    right: R,
+) {
+    println!("{left}={right}");
+}
+fn main() {
+    show(3, 4);
+}''',
+            b='''use std::fmt::Display;
+fn show<T: Display>(left: T, right: T) {
+    println!("{left}={right}");
+}
+fn main() {
+    show(3, 4);
+}''',
+            answer='a',
+            lint=None,
+            good='Separate type parameters let show("items", 4) choose a different concrete type for each argument. Reusing T forces both arguments to have one type, even though both separately implement Display. No heap or type erasure is needed in either current sample.',
+            bad='Substitute &str and i32 for the two argument types. Must they be the same T?',
+            wrap=False,
+        ),
+        better(
+            prompt='A wire protocol currently has Add and Sub. If it gains Multiply, the dispatcher must fail to compile until that case is handled. Which design gives that reminder while supporting both current operations?',
+            a='''trait Op {
+    fn run(&self, n: i32) -> i32;
+}
+struct Add;
+struct Sub;
+impl Op for Add {
+    fn run(&self, n: i32) -> i32 {
+        n + 1
+    }
+}
+impl Op for Sub {
+    fn run(&self, n: i32) -> i32 {
+        n - 1
+    }
+}
+fn apply(op: Box<dyn Op>, n: i32) -> i32 {
+    op.run(n)
+}
+fn main() {
+    println!("{}", apply(Box::new(Add), 2));
+    println!("{}", apply(Box::new(Sub), 2));
+}''',
+            b='''enum Op {
+    Add,
+    Sub,
+}
+fn apply(op: Op, n: i32) -> i32 {
+    match op {
+        Op::Add => n + 1,
+        Op::Sub => n - 1,
+    }
+}
+fn main() {
+    println!("{}", apply(Op::Add, 2));
+    println!("{}", apply(Op::Sub, 2));
+}''',
+            answer='b',
+            lint=None,
+            good='An enum match must handle every variant, so adding Multiply makes an incomplete apply fail to compile. The trait-based implementation supports both operations too, but adding another implementer does not require updating a central dispatcher.',
+            bad='Which representation tells the compiler the full set of operations?',
+            wrap=False,
+        ),
+        better(
+            prompt='Slow work must not hold the shared lock. Which releases it first? (std stand-in for work around .await.)',
+            a='''use std::sync::Mutex;
+fn slow(n: i32) {
+    println!("{n}");
+}
+fn main() {
+    let state = Mutex::new(3);
+    let snapshot =
+        { *state.lock().unwrap() };
+    slow(snapshot);
+}''',
+            b='''use std::sync::Mutex;
+fn slow(n: i32) {
+    println!("{n}");
+}
+fn main() {
+    let state = Mutex::new(3);
+    let guard = state.lock().unwrap();
+    slow(*guard);
+    drop(guard);
+}''',
+            answer='a',
+            lint=None,
+            good='The snapshot version copies the number while holding a temporary guard. That guard is dropped at the end of the let statement, before slow is called. The other version explicitly drops its guard only after slow returns. This snapshot is valid because slow does not require an atomic update.',
+            bad='When does each guard get dropped?',
+            wrap=False,
+        ),
+        better(
+            prompt='Both sell one available unit in this run. With competing buyers, which version prevents two buyers from both acting on the last unit being available?',
+            a='''use std::sync::Mutex;
+fn main() {
+    let stock = Mutex::new(1);
+    let available =
+        { *stock.lock().unwrap() > 0 };
+    let mut guard = stock.lock().unwrap();
+    if available {
+        *guard -= 1;
+    }
+    println!("{}", *guard);
+}''',
+            b='''use std::sync::Mutex;
+fn main() {
+    let stock = Mutex::new(1);
+    let mut guard = stock.lock().unwrap();
+    if *guard > 0 {
+        *guard -= 1;
+    }
+    println!("{}", *guard);
+}''',
+            answer='b',
+            lint=None,
+            good='The successful design checks availability while holding the same guard used to decrement. In the other version, a buyer may observe availability, release the temporary guard, and then decrement after another buyer has already sold that unit.',
+            bad='Can the truth of available change before the guard used for decrement is acquired?',
+            wrap=False,
+        ),
+        better(
+            prompt='Loaded content must exist exactly when state is Ready. Which encodes that relationship?',
+            a='''struct Load {
+    ready: bool,
+    text: Option<String>,
+}
+fn main() {
+    let s = Load {
+        ready: true,
+        text: Some(String::from("ok")),
+    };
+    if s.ready {
+        println!("{}", s.text.unwrap());
+    }
+}''',
+            b='''enum Load {
+    Pending,
+    Ready(String),
+}
+fn main() {
+    let s = Load::Ready(String::from("ok"));
+    match s {
+        Load::Ready(text) => {
+            println!("{text}")
+        }
+        Load::Pending => (),
+    }
+}''',
+            answer='b',
+            lint=None,
+            good='B cannot represent ready=true with no content. A admits that combination and would panic when printed.',
+            bad='Can each type express ready with missing text?',
+            wrap=False,
+        ),
+        better(
+            prompt='Both label the counts with domain names. Which API rejects swapping an already typed byte count with an item count at compile time?',
+            a='''struct Items(usize);
+struct Bytes(usize);
+fn show(items: Items, bytes: Bytes) {
+    println!("{} {}", items.0, bytes.0);
+}
+fn main() {
+    show(Items(2), Bytes(8));
+}''',
+            b='''type Items = usize;
+type Bytes = usize;
+fn show(items: Items, bytes: Bytes) {
+    println!("{items} {bytes}");
+}
+fn main() {
+    show(2, 8);
+}''',
+            answer='a',
+            lint=None,
+            good='The tuple structs create distinct types. The type aliases are plausible documentation but still denote the same usize type, so a caller can swap them without a compiler error.',
+            bad='Trace whether Items and Bytes are new types or just alternate names for usize.',
+            wrap=False,
+        ),
+    ],
+})
+
+# Part 3 / 34
+COURSE.append({
+    'part': 3,
+    'id': 'ai-review',
+    'title': '"AI wrote this"',
+    'summary': 'Read the whole short program, locate its smell, then choose the repair.',
+    "cards": [
+        card(
+            h='Read the whole program before flagging a line',
+            p='Trace the input, data lifetime and output first. A clone may be justified; an unwrap may be justified by a checked invariant. The review prompts intentionally do not name the lint. Flag the one line for which Clippy provides evidence, then assess repair attempts.',
+            code='''let input = Some(6);
+let n = match input {
+    Some(n) => n,
+    None => 0,
+};
+println!("{}", n * 2);''',
+            note='One lint per program is a checker limit; it does not mean a real review should stop after one finding.',
+        ),
+        card(
+            h='A repair can hide a symptom',
+            p='An allow attribute silences a lint for the attached code; it does not change the API or behavior. is_empty() asks whether a collection has no elements. A plausible repair may compile and match the sample while failing the requested contract.',
+            code='''#[allow(unused_variables)]
+let reserved = 9;
+let bytes = "";
+println!("{}", bytes.is_empty());''',
+            note='After each line-selection question, choose between two changed programs. Use the stated repair requirement; the preceding lint fix alone does not settle the choice.',
+        ),
+    ],
+    "problems": [
+        smell(
+            prompt='Which line would you flag in review?',
+            code='''fn total(values: &Vec<i32>) -> i32 {
+    values.iter().sum()
+}
+fn main() {
+    let mut batch = vec![2, 3];
+    let saved = batch.clone();
+    batch.push(4);
+    println!("{}", total(&batch));
+    println!("{saved:?}");
+}''',
+            line=1,
+            lint='clippy::ptr_arg',
+            fixed='''fn total(values: &[i32]) -> i32 {
+    values.iter().sum()
+}
+fn main() {
+    let mut batch = vec![2, 3];
+    let saved = batch.clone();
+    batch.push(4);
+    println!("{}", total(&batch));
+    println!("{saved:?}");
+}''',
+            good='Clippy flags clippy::ptr_arg. Read the repair choices against the next requirement.',
+            bad='Trace each line; distinguish a real contract restriction from legitimate ownership or control flow.',
+            wrap=False,
+        ),
+        better(
+            prompt='Repair request: sum a borrowed array or vector without copying it. Which changed API meets that requirement?',
+            a='''fn total(values: Vec<i32>) -> i32 {
+    values.iter().sum()
+}
+fn main() {
+    let mut batch = vec![2, 3];
+    let saved = batch.clone();
+    batch.push(4);
+    println!("{}", total(batch.clone()));
+    println!("{saved:?}");
+}''',
+            b='''fn total(values: &[i32]) -> i32 {
+    values.iter().sum()
+}
+fn main() {
+    let mut batch = vec![2, 3];
+    let saved = batch.clone();
+    batch.push(4);
+    println!("{}", total(&batch));
+    println!("{saved:?}");
+}''',
+            answer='b',
+            lint=None,
+            good='The slice repair accepts a borrowed array or vector. Taking Vec by value and cloning at the call hides the pointer lint by imposing an unnecessary ownership requirement. The separate saved clone is justified: it preserves the old batch before push.',
+            bad='Try an array caller, and count allocations required just to sum.',
+            wrap=False,
+        ),
+        smell(
+            prompt='Which line would you flag in review?',
+            code='''fn main() {
+    let mut tasks = vec!["job"];
+    let completed = tasks.pop();
+    if tasks.len() == 0 {
+        println!("idle");
+    }
+    println!("{completed:?}");
+}''',
+            line=4,
+            lint='clippy::len_zero',
+            fixed='''fn main() {
+    let mut tasks = vec!["job"];
+    let completed = tasks.pop();
+    if tasks.is_empty() {
+        println!("idle");
+    }
+    println!("{completed:?}");
+}''',
+            good='Clippy flags clippy::len_zero. Read the repair choices against the next requirement.',
+            bad='Trace each line; distinguish a real contract restriction from legitimate ownership or control flow.',
+            wrap=False,
+        ),
+        better(
+            prompt='Repair request: express emptiness directly, without suppressing a warning. Which changed program does that?',
+            a='''fn main() {
+    let mut tasks = vec!["job"];
+    let completed = tasks.pop();
+    #[allow(clippy::len_zero)]
+    if tasks.len() == 0 {
+        println!("idle");
+    }
+    println!("{completed:?}");
+}''',
+            b='''fn main() {
+    let mut tasks = vec!["job"];
+    let completed = tasks.pop();
+    if tasks.is_empty() {
+        println!("idle");
+    }
+    println!("{completed:?}");
+}''',
+            answer='b',
+            lint=None,
+            good='is_empty states the predicate directly. The allow repair suppresses the same expression instead of addressing it; popping and inspecting completed are valid work, not the flagged line.',
+            bad='Both are changed programs and match the sample. Which meets the stated contract beyond that sample?',
+            wrap=False,
+        ),
+        smell(
+            prompt='Which line would you flag in review?',
+            code='''fn permitted(level: u32) -> bool {
+    if level >= 2 {
+        true
+    } else {
+        false
+    }
+}
+fn main() {
+    let limits = [3];
+    let limit = limits[0];
+    println!("{}", permitted(limit));
+}''',
+            line=2,
+            lint='clippy::needless_bool',
+            fixed='''fn permitted(level: u32) -> bool {
+    level >= 2
+}
+fn main() {
+    let limits = [3];
+    let limit = limits[0];
+    println!("{}", permitted(limit));
+}''',
+            good='Clippy flags clippy::needless_bool. Read the repair choices against the next requirement.',
+            bad='Trace each line; distinguish a real contract restriction from legitimate ownership or control flow.',
+            wrap=False,
+        ),
+        better(
+            prompt='Repair request: remove the redundant branches but preserve permission at the threshold, including level 2. Which repair?',
+            a='''fn permitted(level: u32) -> bool {
+    level >= 2
+}
+fn main() {
+    let limits = [3];
+    let limit = limits[0];
+    println!("{}", permitted(limit));
+}''',
+            b='''fn permitted(level: u32) -> bool {
+    level > 2
+}
+fn main() {
+    let limits = [3];
+    let limit = limits[0];
+    println!("{}", permitted(limit));
+}''',
+            answer='a',
+            lint=None,
+            good='The >= repair includes level 2. The > repair also removes branches and passes the sample at 3, but changes boundary behavior. Neither option is the original branching program.',
+            bad='Both are changed programs and match the sample. Which meets the stated contract beyond that sample?',
+            wrap=False,
+        ),
+        smell(
+            prompt='Which line would you flag in review?',
+            code='''fn main() {
+    let stages = ["queued", "done"];
+    let ready = stages.contains(&"done");
+    if ready == true {
+        println!("send");
+    }
+}''',
+            line=4,
+            lint='clippy::bool_comparison',
+            fixed='''fn main() {
+    let stages = ["queued", "done"];
+    let ready = stages.contains(&"done");
+    if ready {
+        println!("send");
+    }
+}''',
+            good='Clippy flags clippy::bool_comparison. Read the repair choices against the next requirement.',
+            bad='Trace each line; distinguish a real contract restriction from legitimate ownership or control flow.',
+            wrap=False,
+        ),
+        better(
+            prompt='Repair request: send if any stage is done, even if later stages are queued. Both repairs work for this sample. Which preserves the rule for reordered stages?',
+            a='''fn main() {
+    let stages = ["queued", "done"];
+    let ready = stages.contains(&"done");
+    if ready {
+        println!("send");
+    }
+}''',
+            b='''fn main() {
+    let stages = ["queued", "done"];
+    let ready = stages.contains(&"done");
+    if stages[stages.len() - 1] == "done" {
+        println!("send");
+    }
+}''',
+            answer='a',
+            lint=None,
+            good='The membership predicate finds done anywhere. The last-stage repair is a plausible assumption about ordered progress, but loses an earlier done when a later queued stage exists. Empty input also makes its index invalid.',
+            bad='Try ["done", "queued"] rather than assuming done always comes last.',
+            wrap=False,
+        ),
+    ],
+})
+
+# Part 3 / 35
+COURSE.append({
+    'part': 3,
+    'id': 'steer-ai',
+    'title': 'Steering AI',
+    'summary': 'Ask for contracts, errors and ownership first; judge the resulting before/after code.',
+    "cards": [
+        card(
+            h='Ask for types before implementation',
+            p='Describe what can be represented, not just which sample should print. Ask for type signatures and module boundaries first; review them before requesting the implementation. Here a coordinate always has both components.',
+            code='''struct Position {
+    x: i32,
+    y: i32,
+}
+let point = Position {
+    x: 2,
+    y: 5,
+};
+println!("{} {}", point.x, point.y);''',
+            note="A types-first request should name illegal states or confused quantities. Do not accept a type merely because its example compiles. `crate::` starts a path at the current crate root, so one module can call another module's public function.",
+        ),
+        card(
+            h='Specify failure and ownership policies',
+            p='Ask which layer handles failure and which values are borrowed, moved or copied. Result<T, E> exposes success and failure separately; a typed error can carry useful context. Rc::clone shares an allocation rather than copying its contents.',
+            code='''enum OpenError {
+    Missing,
+    Denied,
+}
+let attempt: Result<(), OpenError> =
+    Err(OpenError::Denied);
+match attempt {
+    Ok(()) => println!("opened"),
+    Err(OpenError::Missing) => {
+        println!("gone")
+    }
+    Err(OpenError::Denied) => {
+        println!("denied")
+    }
+}''',
+            note='Require an explanation for shared mutation or a clone. Borrowing is not the right answer when the requested value must be independent.',
+        ),
+        card(
+            h='Ask for evidence at boundaries',
+            p='u8::MAX and u32::MAX are the largest values of those types. checked_add returns Some(sum), or None on integer overflow. Test failure behavior distinctly from valid zero; a fallback can hide the distinction. assert_eq! checks equality and fails the run if values differ.',
+            code='''let value = u8::MAX;
+let result = value.checked_add(2);
+assert_eq!(result, None);''',
+            note='Use boundary examples the implementation could get wrong. The following tasks ask for contracts and evidence, not a vague promise of idiomatic code.',
+        ),
+    ],
+    "problems": [
+        better(
+            prompt="Ask: 'Put the shared range rule in one small module and reuse it from both entry points; changing the rule should require one edit.' Which implementation follows that request?",
+            a='''mod rules {
+    pub fn valid(n: i32) -> bool {
+        n > 0
+    }
+}
+mod cli {
+    pub fn accept(n: i32) -> bool {
+        crate::rules::valid(n)
+    }
+}
+mod api {
+    pub fn accept(n: i32) -> bool {
+        crate::rules::valid(n)
+    }
+}
+fn main() {
+    println!("{}", cli::accept(2));
+    println!("{}", api::accept(2));
+}''',
+            b='''mod cli {
+    pub fn accept(n: i32) -> bool {
+        n > 0
+    }
+}
+mod api {
+    pub fn accept(n: i32) -> bool {
+        n > 0
+    }
+}
+fn main() {
+    println!("{}", cli::accept(2));
+    println!("{}", api::accept(2));
+}''',
+            answer='a',
+            lint=None,
+            good='Both entry points currently accept the same numbers. The rules module owns one definition; the other implementation separates files conceptually but duplicates the policy, so a future boundary change must be made in two places.',
+            bad='If the rule changes to allow zero, how many definitions must change?',
+            wrap=False,
+        ),
+        better(
+            prompt="Ask: 'Return a typed error that callers can match, not a magic sentinel.' Which response?",
+            a='''#[derive(Debug)]
+enum ParseError {
+    Invalid,
+}
+fn parse(
+    s: &str,
+) -> Result<u32, ParseError> {
+    match s.parse() {
+        Ok(n) => Ok(n),
+        Err(_) => Err(ParseError::Invalid),
+    }
+}
+fn main() {
+    println!("{}", parse("4").unwrap());
+}''',
+            b='''fn parse(s: &str) -> u32 {
+    s.parse().unwrap_or(0)
+}
+fn main() {
+    println!("{}", parse("4"));
+}''',
+            answer='a',
+            lint=None,
+            good='A distinguishes failure from a valid zero. The sample main unwraps known valid input; a real input boundary should match the Result.',
+            bad='Can a caller tell invalid input apart from the number zero?',
+            wrap=False,
+        ),
+        better(
+            prompt="Ask: 'Test empty input and a nonempty list where every value is negative, to catch a maximum accidentally initialized to zero.' (`.max()` gives the biggest item of an iterator as an Option; None when it is empty.) Which suite exercises both named edge cases?",
+            a='''fn largest(values: &[i32]) -> Option<i32> {
+    match values.iter().max() {
+        Some(n) => Some(*n),
+        None => None,
+    }
+}
+fn main() {
+    assert_eq!(largest(&[]), None);
+    assert_eq!(largest(&[-5, 0]), Some(0));
+    println!("checked");
+}''',
+            b='''fn largest(values: &[i32]) -> Option<i32> {
+    match values.iter().max() {
+        Some(n) => Some(*n),
+        None => None,
+    }
+}
+fn main() {
+    assert_eq!(largest(&[]), None);
+    assert_eq!(largest(&[-5, -2]), Some(-2));
+    println!("checked");
+}''',
+            answer='b',
+            lint=None,
+            good='Both suites test empty and nonempty input. Only [-5, -2] is all-negative, so an incorrect zero starting maximum would fail it; the mixed [-5, 0] case would still pass. This is a named edge-case review, not another ownership signature drill.',
+            bad='Does the supposed negative test actually exclude zero?',
+            wrap=False,
+        ),
+        better(
+            prompt="Ask: 'Separate calculation from printing so I can test it without capturing stdout.' Which response?",
+            a='''fn sum(values: &[i32]) {
+    println!(
+        "{}",
+        values.iter().sum::<i32>()
+    );
+}
+fn main() {
+    sum(&[2, 3]);
+}''',
+            b='''fn sum(values: &[i32]) -> i32 {
+    values.iter().sum()
+}
+fn main() {
+    println!("{}", sum(&[2, 3]));
+}''',
+            answer='b',
+            lint=None,
+            good='B returns a value from the pure core; main owns printing. Tests can assert sum(&[2,3]) == 5 directly.',
+            bad='Which calculation function exposes its result to a test?',
+            wrap=False,
+        ),
+        better(
+            prompt="Ask: 'Return an independent snapshot of shared mutable text, so later edits do not change the saved value.' Which response meets that contract?",
+            a='''use std::cell::RefCell;
+use std::rc::Rc;
+fn snapshot(
+    source: &Rc<RefCell<String>>,
+) -> Rc<RefCell<String>> {
+    Rc::new(RefCell::new(
+        source.borrow().clone(),
+    ))
+}
+fn main() {
+    let source = Rc::new(RefCell::new(
+        String::from("oak"),
+    ));
+    let saved = snapshot(&source);
+    println!("{}", saved.borrow());
+}''',
+            b='''use std::cell::RefCell;
+use std::rc::Rc;
+fn snapshot(
+    source: &Rc<RefCell<String>>,
+) -> Rc<RefCell<String>> {
+    Rc::clone(source)
+}
+fn main() {
+    let source = Rc::new(RefCell::new(
+        String::from("oak"),
+    ));
+    let saved = snapshot(&source);
+    println!("{}", saved.borrow());
+}''',
+            answer='a',
+            lint=None,
+            good='Cloning the inner String creates independent contents. Rc::clone only adds an owner of the same RefCell. Both show oak initially; a later source.borrow_mut().push would change the shared-clone result too.',
+            bad='Which clone duplicates text, and which only shares its owner?',
+            wrap=False,
+        ),
+        better(
+            prompt="Ask: 'Expose only the double operation from this module; callers must not be able to set the multiplier.' Which response keeps that public boundary?",
+            a='''mod math {
+    pub fn scale(
+        n: i32,
+        factor: i32,
+    ) -> i32 {
+        n * factor
+    }
+    pub fn double(n: i32) -> i32 {
+        scale(n, 2)
+    }
+}
+fn main() {
+    println!("{}", math::double(3));
+}''',
+            b='''mod math {
+    fn scale(n: i32, factor: i32) -> i32 {
+        n * factor
+    }
+    pub fn double(n: i32) -> i32 {
+        scale(n, 2)
+    }
+}
+fn main() {
+    println!("{}", math::double(3));
+}''',
+            answer='b',
+            lint=None,
+            good='Keeping scale private exposes the requested operation without exposing an arbitrary factor. Both versions compute double identically; the distinction is what external callers can request.',
+            bad='Inspect pub on each function, not just the main call.',
+            wrap=False,
+        ),
+        better(
+            prompt="Ask: 'Do not overflow at the boundary; return None when addition is impossible.' Which response?",
+            a='''fn next(n: u32) -> Option<u32> {
+    Some(n + 1)
+}
+fn main() {
+    println!("{:?}", next(4));
+}''',
+            b='''fn next(n: u32) -> Option<u32> {
+    n.checked_add(1)
+}
+fn main() {
+    println!("{:?}", next(4));
+}''',
+            answer='b',
+            lint=None,
+            good='B returns None at u32::MAX. A wraps or panics depending on build settings. Ask for a boundary test; the sample 4 cannot distinguish them.',
+            bad='Which operation defines overflow explicitly?',
+            wrap=False,
+        ),
+        better(
+            prompt="Ask: 'Write tests that distinguish invalid input from valid zero, even if the parser regresses to returning Ok(0) on errors.' Which test suite catches that regression?",
+            a='''fn parse(
+    s: &str,
+) -> Result<u32, &'static str> {
+    match s.parse() {
+        Ok(n) => Ok(n),
+        Err(_) => Err("invalid"),
+    }
+}
+fn main() {
+    assert_eq!(parse("0"), Ok(0));
+    assert_eq!(
+        parse("oops"),
+        Err("invalid")
+    );
+    println!("checked");
+}''',
+            b='''fn parse(
+    s: &str,
+) -> Result<u32, &'static str> {
+    match s.parse() {
+        Ok(n) => Ok(n),
+        Err(_) => Err("invalid"),
+    }
+}
+fn main() {
+    assert_eq!(parse("0"), Ok(0));
+    assert_eq!(
+        parse("oops").unwrap_or(0),
+        0
+    );
+    println!("checked");
+}''',
+            answer='a',
+            lint=None,
+            good='The exact Err assertion fails if the parser silently returns Ok(0). The fallback assertion exercises invalid input but collapses both outcomes to zero, so that regression passes. Both suites also test valid zero.',
+            bad='Would replacing the error branch with Ok(0) make either test fail?',
+            wrap=False,
+        ),
     ],
 })
 
