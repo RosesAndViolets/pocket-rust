@@ -5330,9 +5330,669 @@
    ]
   },
   {
+   "id": "cli-structure",
+   "part": 2,
+   "n": 23,
+   "title": "A command-line tool: structure",
+   "summary": "Study ripgrep and clap: crate boundaries, named arguments, and exit status.",
+   "cards": [
+    {
+     "type": "real",
+     "h": "Small crates, one application",
+     "p": "A Cargo workspace builds related packages together; each member has its own Cargo.toml. Ripgrep separates matching, searching and printing. Put reusable behavior in libraries and let the binary coordinate them. This is a manifest, not Rust code.",
+     "code": [
+      "[workspace]",
+      "members = [",
+      "  \"crates/globset\",",
+      "  \"crates/grep\",",
+      "  \"crates/cli\",",
+      "  \"crates/matcher\",",
+      "  \"crates/pcre2\",",
+      "  \"crates/printer\",",
+      "  \"crates/regex\",",
+      "  \"crates/searcher\",",
+      "  \"crates/ignore\",",
+      "]"
+     ],
+     "repo": "BurntSushi/ripgrep",
+     "tag": "14.1.1",
+     "path": "Cargo.toml",
+     "lines": [
+      38,
+      49
+     ],
+     "license": "MIT",
+     "note": "Ripgrep is not a tiny main demo: its application layer is substantial. Copy the dependency direction, not its size.",
+     "own": false,
+     "link": "https://github.com/BurntSushi/ripgrep/blob/14.1.1/Cargo.toml#L38-L49"
+    },
+    {
+     "type": "real",
+     "h": "Arguments become a struct",
+     "p": "clap is an external crate. Its Parser derive generates parsing; <code>#[command]</code> sets app metadata and <code>#[arg(short, long)]</code> accepts short/long flag forms. Cli::parse reads the process arguments once, handling help and invalid input. A bool field records whether a switch was set. A tuple groups values by position, accessed with <code>.0</code>, <code>.1</code>, and so on; a struct names their roles. Handle help before expensive work.",
+     "code": [
+      "use clap::Parser;",
+      "",
+      "#[derive(Parser)]",
+      "#[command(version, about, long_about = None)]",
+      "struct Cli {",
+      "    #[arg(short, long)]",
+      "    verbose: bool,",
+      "}",
+      "",
+      "fn main() {",
+      "    let cli = Cli::parse();",
+      "",
+      "    println!(\"verbose: {:?}\", cli.verbose);",
+      "}"
+     ],
+     "repo": "clap-rs/clap",
+     "tag": "v4.5.20",
+     "path": "examples/tutorial_derive/03_01_flag_bool.rs",
+     "lines": [
+      1,
+      14
+     ],
+     "license": "MIT",
+     "note": "The exercises use only std. Turn raw text into named fields before the core sees it.",
+     "own": false,
+     "link": "https://github.com/clap-rs/clap/blob/v4.5.20/examples/tutorial_derive/03_01_flag_bool.rs#L1-L14"
+    },
+    {
+     "type": "real",
+     "h": "The shell needs an outcome",
+     "p": "This is the tail of ripgrep&#x27;s run function. It returns 0 for a match, 2 for an error, 1 for no match. A no-match result is normal search behavior. Exit meanings belong to the tool&#x27;s contract.",
+     "code": [
+      "    Ok(if matched && (args.quiet() || !messages::errored()) {",
+      "        ExitCode::from(0)",
+      "    } else if messages::errored() {",
+      "        ExitCode::from(2)",
+      "    } else {",
+      "        ExitCode::from(1)",
+      "    })",
+      "}"
+     ],
+     "repo": "BurntSushi/ripgrep",
+     "tag": "14.1.1",
+     "path": "crates/core/main.rs",
+     "lines": [
+      94,
+      101
+     ],
+     "license": "MIT",
+     "note": "<code>std::process::ExitCode</code> can be returned from main; SUCCESS is zero, FAILURE is a portable failure, and ExitCode::from(u8) selects a code. Returning a nonzero code is different from printing a number.",
+     "own": false,
+     "link": "https://github.com/BurntSushi/ripgrep/blob/14.1.1/crates/core/main.rs#L94-L101"
+    },
+    {
+     "h": "Acquire input at the boundary",
+     "p": "<code>std::env::args()</code> yields owned String arguments, including the executable name first; <code>.skip(1)</code> omits it. <code>.next()</code> returns the next item as Option. <code>into_iter()</code> consumes a collection to make an iterator. Simulate arguments in exercises so tests do not depend on the actual command line. eprintln! writes diagnostics to stderr; println! writes results to stdout.",
+     "code": [
+      "fn main() {",
+      "    let count = std::env::args().skip(1).count();",
+      "    eprintln!(\"received {count} arguments\");",
+      "}"
+     ],
+     "note": "<code>count()</code> consumes an iterator and returns its item count. Pure functions take data and return data: keep argument access, file access and printing in main, around a reusable library call."
+    }
+   ],
+   "problems": [
+    {
+     "id": "cli-structure-1",
+     "type": "fill",
+     "prompt": "The parser accepts a count; keep the core numeric. Fill the config field type.",
+     "good": "The count is converted once into an integer field.",
+     "bad": "Which type lets the core multiply without parsing again?",
+     "lines": [
+      "struct Config { copies: __ }",
+      "fn parse(s: &str) -> Config {",
+      "    Config { copies: s.parse().unwrap() }",
+      "}",
+      "fn main() {",
+      "    let cfg = parse(\"3\");",
+      "    println!(\"{}\", cfg.copies * 4);",
+      "}"
+     ],
+     "bank": [
+      "i32",
+      "String",
+      "bool"
+     ],
+     "answer": [
+      "i32"
+     ]
+    },
+    {
+     "id": "cli-structure-2",
+     "type": "better",
+     "prompt": "Both store a label and a quiet switch. Which representation makes callers less likely to confuse the settings?",
+     "good": "Named fields carry meaning at each use. A tuple does work, but readers must remember each position.",
+     "bad": "Judge clarity for callers, not whether either sample works.",
+     "a": [
+      "fn settings() -> (String, bool) {",
+      "    (String::from(\"scan\"), true)",
+      "}",
+      "fn main() {",
+      "    let c = settings();",
+      "    println!(\"{} {}\", c.0, c.1);",
+      "}"
+     ],
+     "b": [
+      "struct Args { label: String, quiet: bool }",
+      "fn settings() -> Args {",
+      "    Args {",
+      "        label: String::from(\"scan\"),",
+      "        quiet: true,",
+      "    }",
+      "}",
+      "fn main() {",
+      "    let c = settings();",
+      "    println!(\"{} {}\", c.label, c.quiet);",
+      "}"
+     ],
+     "answer": "b",
+     "judged": true
+    },
+    {
+     "id": "cli-structure-3",
+     "type": "output",
+     "prompt": "These strings simulate env::args. Which argument reaches the parser?",
+     "good": "skip(1) removes the executable name, not the first user option.",
+     "bad": "next takes one item from the remaining iterator.",
+     "lines": [
+      "let raw = vec![\"finder\", \"--quiet\", \"x\"];",
+      "let mut args = raw.into_iter().skip(1);",
+      "println!(\"{}\", args.next().unwrap());"
+     ],
+     "bank": [
+      "finder",
+      "--quiet",
+      "src"
+     ],
+     "answer": [
+      "--quiet"
+     ]
+    },
+    {
+     "id": "cli-structure-4",
+     "type": "fill",
+     "prompt": "Return success after checking the result. This run must print done and exit successfully.",
+     "good": "SUCCESS tells the shell that work completed.",
+     "bad": "The checker runs the program too: a failure exit does not count as success.",
+     "lines": [
+      "use std::process::ExitCode;",
+      "fn main() -> ExitCode {",
+      "    let written = 2;",
+      "    if written > 0 {",
+      "        println!(\"done\");",
+      "        ExitCode::__",
+      "    } else {",
+      "        ExitCode::FAILURE",
+      "    }",
+      "}"
+     ],
+     "bank": [
+      "SUCCESS",
+      "FAILURE"
+     ],
+     "answer": [
+      "SUCCESS"
+     ]
+    },
+    {
+     "id": "cli-structure-5",
+     "type": "error",
+     "prompt": "The core accepts parsed data. Which line mistakenly sends raw text instead?",
+     "good": "run requires Config, so the boundary must construct one first.",
+     "bad": "Look at the argument type required by run.",
+     "lines": [
+      "struct Config { limit: i32 }",
+      "fn run(c: Config) -> i32 { c.limit * 2 }",
+      "fn main() {",
+      "    let raw = \"5\";",
+      "    println!(\"{}\", run(raw));",
+      "}"
+     ],
+     "answer": 4,
+     "rustc": "error[E0308]: mismatched types\n --> src/main.rs:5:24\n  |\n5 |     println!(\"{}\", run(raw));\n  |                    --- ^^^ expected `Config`, found `&str`\n  |                    |\n  |                    arguments to this function are incorrect\n  |\nnote: function defined here\n --> src/main.rs:2:4\n  |\n2 | fn run(c: Config) -> i32 { c.limit * 2 }\n  |    ^^^ ---------"
+    },
+    {
+     "id": "cli-structure-6",
+     "type": "order",
+     "prompt": "Wire a reusable library call to the output at the edge.",
+     "good": "Input, library calculation, then presentation.",
+     "bad": "Each stage consumes the previous stage&#x27;s value.",
+     "head": [
+      "mod logic {",
+      "    pub fn area(n: i32) -> i32 { n * n }",
+      "}",
+      "fn main() {"
+     ],
+     "tail": [
+      "}"
+     ],
+     "pool": [
+      "let side = 7;",
+      "let result = logic::area(side);",
+      "println!(\"{result}\");"
+     ],
+     "accept": [
+      [
+       "let side = 7;",
+       "let result = logic::area(side);",
+       "println!(\"{result}\");"
+      ]
+     ]
+    },
+    {
+     "id": "cli-structure-7",
+     "type": "better",
+     "prompt": "A real scan is expensive. Both stand-ins print usage for help. Which keeps scanning behind the normal-work branch?",
+     "good": "Dispatching help first avoids running the scan for a request that only needs instructions. Both versions produce the requested output.",
+     "bad": "Trace whether scan runs before the help branch.",
+     "a": [
+      "fn scan() -> i32 { (1..10).sum() }",
+      "fn main() {",
+      "    let help = true;",
+      "    if help {",
+      "        println!(\"usage\");",
+      "    } else {",
+      "        println!(\"{}\", scan());",
+      "    }",
+      "}"
+     ],
+     "b": [
+      "fn scan() -> i32 { (1..10).sum() }",
+      "fn main() {",
+      "    let help = true;",
+      "    let count = scan();",
+      "    if help {",
+      "        println!(\"usage\");",
+      "    } else {",
+      "        println!(\"{count}\");",
+      "    }",
+      "}"
+     ],
+     "answer": "a",
+     "judged": true
+    },
+    {
+     "id": "cli-structure-8",
+     "type": "output",
+     "prompt": "This tool uses ripgrep-style status meanings. It found no matches and had no error. What status number does this helper choose?",
+     "good": "No match is a distinct normal outcome; an error would be 2. This prints the choice to make it testable; main would return ExitCode::from(choice).",
+     "bad": "Follow the branch for neither found nor failed.",
+     "lines": [
+      "fn status(found: bool, failed: bool) -> u8 {",
+      "    if failed { 2 }",
+      "    else if found { 0 }",
+      "    else { 1 }",
+      "}",
+      "fn main() {",
+      "    println!(\"{}\", status(false, false));",
+      "}"
+     ],
+     "bank": [
+      "0",
+      "1",
+      "2"
+     ],
+     "answer": [
+      "1"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cli-rules",
+   "part": 2,
+   "n": 24,
+   "title": "A command-line tool: rules",
+   "summary": "Parse once, keep errors useful, and test a pure core.",
+   "cards": [
+    {
+     "type": "real",
+     "h": "Application errors collect context",
+     "p": "anyhow::Result is an external-crate result used to propagate different error types with useful context for a person. This application function dispatches a parsed result; it is not a library error contract. The special mode covers requests such as help.",
+     "code": [
+      "fn run(result: crate::flags::ParseResult<HiArgs>) -> anyhow::Result<ExitCode> {",
+      "    use crate::flags::{Mode, ParseResult};",
+      "",
+      "    let args = match result {",
+      "        ParseResult::Err(err) => return Err(err),",
+      "        ParseResult::Special(mode) => return special(mode),",
+      "        ParseResult::Ok(args) => args,",
+      "    };"
+     ],
+     "repo": "BurntSushi/ripgrep",
+     "tag": "14.1.1",
+     "path": "crates/core/main.rs",
+     "lines": [
+      77,
+      84
+     ],
+     "license": "MIT",
+     "note": "An anyhow-style main reports failures from many layers. A library usually returns a concrete error type so callers can decide what to do, instead of interpreting message strings. Our std exercises use Result and typed enums.",
+     "own": false,
+     "link": "https://github.com/BurntSushi/ripgrep/blob/14.1.1/crates/core/main.rs#L77-L84"
+    },
+    {
+     "type": "real",
+     "h": "Library errors keep their identity",
+     "p": "globset stores the original pattern and an ErrorKind. Its callers can inspect structured failure information. Deriving Debug helps diagnostics; Eq and PartialEq enable comparisons. ErrorKind is an enum defined just below this excerpt.",
+     "code": [
+      "/// Represents an error that can occur when parsing a glob pattern.",
+      "#[derive(Clone, Debug, Eq, PartialEq)]",
+      "pub struct Error {",
+      "    /// The original glob provided by the caller.",
+      "    glob: Option<String>,",
+      "    /// The kind of error.",
+      "    kind: ErrorKind,",
+      "}"
+     ],
+     "repo": "BurntSushi/ripgrep",
+     "tag": "14.1.1",
+     "path": "crates/globset/src/lib.rs",
+     "lines": [
+      142,
+      149
+     ],
+     "license": "MIT",
+     "note": "Keep variants for failures callers need to distinguish. From converts a lower-level error into a library error; ? uses that conversion. Human-readable context belongs at the reporting boundary.",
+     "own": false,
+     "link": "https://github.com/BurntSushi/ripgrep/blob/14.1.1/crates/globset/src/lib.rs#L142-L149"
+    },
+    {
+     "type": "real",
+     "h": "Parse and validate once",
+     "p": "The value_parser macro selects a u16 parser, and range(1..) rejects zero. u16 is an unsigned 16-bit integer. The core receives a valid port, not a String to parse repeatedly. These macros are clap APIs; no external crates appear in our problems.",
+     "code": [
+      "use clap::Parser;",
+      "",
+      "#[derive(Parser)]",
+      "#[command(version, about, long_about = None)]",
+      "struct Cli {",
+      "    /// Network port to use",
+      "    #[arg(value_parser = clap::value_parser!(u16).range(1..))]",
+      "    port: u16,",
+      "}",
+      "",
+      "fn main() {",
+      "    let cli = Cli::parse();",
+      "",
+      "    println!(\"PORT = {}\", cli.port);",
+      "}"
+     ],
+     "repo": "clap-rs/clap",
+     "tag": "v4.5.20",
+     "path": "examples/tutorial_derive/04_02_parse.rs",
+     "lines": [
+      1,
+      15
+     ],
+     "license": "MIT",
+     "note": "Reject invalid input before running work. Do not silently substitute a valid setting for invalid user input unless the CLI contract explicitly asks for that.",
+     "own": false,
+     "link": "https://github.com/clap-rs/clap/blob/v4.5.20/examples/tutorial_derive/04_02_parse.rs#L1-L15"
+    },
+    {
+     "h": "A pure core is easy to test",
+     "p": "Keep I/O at the edges: main reads and writes, while the core accepts borrowed data and returns a value or typed error. Use &amp;str for text the core only reads; &amp;String unnecessarily requires an owned String at the call site. A borrowed config lets multiple operations read it without moving it.",
+     "code": [
+      "fn remaining(total: i32, used: i32) -> i32 {",
+      "    total - used",
+      "}",
+      "#[test]",
+      "fn no_use() {",
+      "    assert_eq!(remaining(9, 0), 9);",
+      "}",
+      "fn main() {",
+      "    let left = remaining(9, 2);",
+      "    println!(\"{left}\");",
+      "}"
+     ],
+     "note": "Clippy is a compiler companion that flags working code with avoidable problems. clippy::ptr_arg flags &amp;String parameters when &amp;str is enough. A test should check a boundary case, not depend on the process arguments or filesystem."
+    }
+   ],
+   "problems": [
+    {
+     "id": "cli-rules-1",
+     "type": "better",
+     "prompt": "Both calculate the total for two batches. Which keeps parsing at the boundary as the number of operations grows?",
+     "good": "One conversion produces a typed config shared by operations. Repeated parsing does the sample job, but couples every operation to input syntax.",
+     "bad": "Count conversions as more operations are added.",
+     "a": [
+      "struct Config { size: i32 }",
+      "fn batch(c: &Config, n: i32) -> i32 {",
+      "    c.size * n",
+      "}",
+      "fn main() {",
+      "    let c = Config {",
+      "        size: \"6\".parse().unwrap(),",
+      "    };",
+      "    let total = batch(&c, 2) + batch(&c, 3);",
+      "    println!(\"{total}\");",
+      "}"
+     ],
+     "b": [
+      "fn batch(raw: &str, n: i32) -> i32 {",
+      "    let size: i32 = raw.parse().unwrap();",
+      "    size * n",
+      "}",
+      "fn main() {",
+      "    let first = batch(\"6\", 2);",
+      "    let total = first + batch(\"6\", 3);",
+      "    println!(\"{total}\");",
+      "}"
+     ],
+     "answer": "a",
+     "judged": true
+    },
+    {
+     "id": "cli-rules-2",
+     "type": "fill",
+     "prompt": "Keep the parser error typed. Which library error variant lets ? convert a failed integer parse?",
+     "good": "The variant retains the source error; From lets ? return an ArgError.",
+     "bad": "The conversion must construct the enum, not a different Result.",
+     "lines": [
+      "use std::num::ParseIntError;",
+      "#[derive(Debug)]",
+      "enum ArgError { Number(ParseIntError) }",
+      "impl From<ParseIntError> for ArgError {",
+      "    fn from(e: ParseIntError) -> Self {",
+      "        Self::__(e)",
+      "    }",
+      "}",
+      "fn count(s: &str) -> Result<i32, ArgError> {",
+      "    Ok(s.parse()?)",
+      "}",
+      "fn main() {",
+      "    println!(\"{}\", count(\"8\").unwrap());",
+      "    match count(\"bad\") {",
+      "        Err(ArgError::Number(_)) => {",
+      "            println!(\"bad count\");",
+      "        }",
+      "        Ok(n) => println!(\"{n}\"),",
+      "    }",
+      "}"
+     ],
+     "bank": [
+      "Number",
+      "Missing",
+      "Ok"
+     ],
+     "answer": [
+      "Number"
+     ]
+    },
+    {
+     "id": "cli-rules-3",
+     "type": "output",
+     "prompt": "A caller can recover by matching a typed reason. What does the boundary print?",
+     "good": "The library preserves the reason. Main selects guidance without comparing message text.",
+     "bad": "The early return determines the variant.",
+     "lines": [
+      "enum InputError { Missing, Invalid }",
+      "fn parse(s: &str)",
+      "    -> Result<i32, InputError>",
+      "{",
+      "    if s.is_empty() {",
+      "        return Err(InputError::Missing);",
+      "    }",
+      "    Err(InputError::Invalid)",
+      "}",
+      "fn main() {",
+      "    match parse(\"\") {",
+      "        Ok(n) => println!(\"{n}\"),",
+      "        Err(InputError::Missing) => {",
+      "            println!(\"usage\");",
+      "        }",
+      "        Err(InputError::Invalid) => {",
+      "            println!(\"invalid\");",
+      "        }",
+      "    }",
+      "}"
+     ],
+     "bank": [
+      "usage",
+      "invalid",
+      "0"
+     ],
+     "answer": [
+      "usage"
+     ]
+    },
+    {
+     "id": "cli-rules-4",
+     "type": "smell",
+     "prompt": "Which parameter needlessly requires an owned text type? Find clippy::ptr_arg.",
+     "good": "&amp;str accepts borrowed text from a String or a literal; the core needs no owned-string capability.",
+     "bad": "Look at what the function actually does with its parameter.",
+     "lines": [
+      "fn width(s: &String) -> usize {",
+      "    s.len()",
+      "}",
+      "fn main() {",
+      "    let name = String::from(\"abc\");",
+      "    println!(\"{}\", width(&name));",
+      "}"
+     ],
+     "answer": 0,
+     "clippy": "warning: writing `&String` instead of `&str` involves a new object where a slice will do\n --> src/main.rs:1:13\n  |\n1 | fn width(s: &String) -> usize {\n  |             ^^^^^^^\n  |\n  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#ptr_arg\n  = note: `-W clippy::ptr-arg` implied by `-W clippy::all`\n  = help: to override `-W clippy::all` add `#[allow(clippy::ptr_arg)]`\nhelp: change this to\n  |\n1 - fn width(s: &String) -> usize {\n1 + fn width(s: &str) -> usize {\n  |"
+    },
+    {
+     "id": "cli-rules-5",
+     "type": "better",
+     "prompt": "The CLI prints a checksum; a future GUI must display it too. Which design makes the calculation reusable without capturing stdout?",
+     "good": "Returning a value lets each interface choose how to present it. Printing in the helper works for today&#x27;s CLI but couples the core to stdout.",
+     "bad": "Which version lets a GUI use the result as data?",
+     "a": [
+      "fn checksum(nums: &[i32]) {",
+      "    let sum: i32 = nums.iter().sum();",
+      "    println!(\"{sum}\");",
+      "}",
+      "fn main() { checksum(&[2, 7]); }"
+     ],
+     "b": [
+      "fn checksum(nums: &[i32]) -> i32 {",
+      "    nums.iter().sum()",
+      "}",
+      "fn main() {",
+      "    let sum = checksum(&[2, 7]);",
+      "    println!(\"{sum}\");",
+      "}"
+     ],
+     "answer": "b",
+     "judged": true
+    },
+    {
+     "id": "cli-rules-6",
+     "type": "order",
+     "prompt": "Reject negative input before calculating. Arrange the parser body.",
+     "good": "Validation happens before the core transformation, and invalid input stays an error.",
+     "bad": "Ok must be the final expression after the rejection guard.",
+     "head": [
+      "fn positive(n: i32)",
+      "    -> Result<i32, String>",
+      "{"
+     ],
+     "tail": [
+      "}",
+      "fn main() {",
+      "    println!(\"{:?}\", positive(3));",
+      "    println!(\"{:?}\", positive(-3));",
+      "}"
+     ],
+     "pool": [
+      "if n < 0 {",
+      "return Err(String::from(\"negative\"));",
+      "}",
+      "Ok(n * 2)"
+     ],
+     "accept": [
+      [
+       "if n < 0 {",
+       "return Err(String::from(\"negative\"));",
+       "}",
+       "Ok(n * 2)"
+      ]
+     ]
+    },
+    {
+     "id": "cli-rules-7",
+     "type": "error",
+     "prompt": "The same config must serve two operations. Which line tries to reuse a moved config?",
+     "good": "The first run takes ownership. Borrow &amp;Config when operations only read it.",
+     "bad": "The config contains a String and is not Copy.",
+     "lines": [
+      "struct Config { path: String }",
+      "fn run(c: Config) {",
+      "    println!(\"{}\", c.path);",
+      "}",
+      "fn main() {",
+      "    let c = Config {",
+      "        path: String::from(\"input\"),",
+      "    };",
+      "    run(c);",
+      "    run(c);",
+      "}"
+     ],
+     "answer": 9,
+     "rustc": "error[E0382]: use of moved value: `c`\n  --> src/main.rs:10:9\n   |\n 6 |     let c = Config {\n   |         - move occurs because `c` has type `Config`, which does not implement the `Copy` trait\n...\n 9 |     run(c);\n   |         - value moved here\n10 |     run(c);\n   |         ^ value used here after move\n   |\nnote: consider changing this parameter type in function `run` to borrow instead if owning the value isn't necessary\n  --> src/main.rs:2:11\n   |\n 2 | fn run(c: Config) {\n   |    ---    ^^^^^^ this parameter takes ownership of the value\n   |    |\n   |    in this function\nnote: if `Config` implemented `Clone`, you could clone the value\n  --> src/main.rs:1:1\n   |\n 1 | struct Config { path: String }\n   | ^^^^^^^^^^^^^ consider implementing `Clone` for this type\n...\n 9 |     run(c);\n   |         - you could clone this value"
+    },
+    {
+     "id": "cli-rules-8",
+     "type": "fill",
+     "prompt": "Test the pure core at the empty-input boundary. Fill the expected value.",
+     "good": "The test checks empty input without files or process arguments; even four copies of empty text contain zero bytes.",
+     "bad": "A boundary test must assert the actual contract.",
+     "lines": [
+      "fn total_bytes(s: &str, n: usize)",
+      "    -> usize",
+      "{",
+      "    s.len() * n",
+      "}",
+      "#[test]",
+      "fn empty_input() {",
+      "    assert_eq!(total_bytes(\"\", 4), __);",
+      "}",
+      "fn main() { println!(\"checked\"); }"
+     ],
+     "bank": [
+      "0",
+      "4",
+      "1"
+     ],
+     "answer": [
+      "0"
+     ]
+    }
+   ]
+  },
+  {
    "id": "smells",
    "part": 3,
-   "n": 23,
+   "n": 25,
    "title": "Clippy's top smells",
    "summary": "Working code can still ask for too much. Let Clippy help.",
    "cards": [
@@ -5548,7 +6208,7 @@
   {
    "id": "borrow-fights",
    "part": 3,
-   "n": 24,
+   "n": 26,
    "title": "Fighting the borrow checker the wrong way",
    "summary": "Shorten borrows and express ownership before adding copies or shared mutation.",
    "cards": [
@@ -5825,7 +6485,7 @@
   {
    "id": "structure-smells",
    "part": 3,
-   "n": 25,
+   "n": 27,
    "title": "Structure smells",
    "summary": "Review responsibilities, types, dispatch and lock scope against a concrete need.",
    "cards": [
@@ -6208,7 +6868,7 @@
   {
    "id": "ai-review",
    "part": 3,
-   "n": 26,
+   "n": 28,
    "title": "\"AI wrote this\"",
    "summary": "Read the whole short program, locate its smell, then choose the repair.",
    "cards": [
@@ -6443,7 +7103,7 @@
   {
    "id": "steer-ai",
    "part": 3,
-   "n": 27,
+   "n": 29,
    "title": "Steering AI",
    "summary": "Ask for contracts, errors and ownership first; judge the resulting before/after code.",
    "cards": [

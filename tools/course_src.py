@@ -2806,6 +2806,531 @@ fn main() {
     ],
 })
 
+# Part 2 / CLI: pinned excerpts; std-only applications.
+COURSE.append({'part': 2,
+ 'id': 'cli-structure',
+ 'title': 'A command-line tool: structure',
+ 'summary': 'Study ripgrep and clap: crate boundaries, named arguments, and exit status.',
+ 'cards': [{'type': 'real',
+            'h': 'Small crates, one application',
+            'p': 'A Cargo workspace builds related packages together; each member has its own '
+                 'Cargo.toml. Ripgrep separates matching, searching and printing. Put reusable '
+                 'behavior in libraries and let the binary coordinate them. This is a manifest, '
+                 'not Rust code.',
+            'code': '[workspace]\n'
+                    'members = [\n'
+                    '  "crates/globset",\n'
+                    '  "crates/grep",\n'
+                    '  "crates/cli",\n'
+                    '  "crates/matcher",\n'
+                    '  "crates/pcre2",\n'
+                    '  "crates/printer",\n'
+                    '  "crates/regex",\n'
+                    '  "crates/searcher",\n'
+                    '  "crates/ignore",\n'
+                    ']',
+            'repo': 'BurntSushi/ripgrep',
+            'tag': '14.1.1',
+            'path': 'Cargo.toml',
+            'lines': (38, 49),
+            'license': 'MIT',
+            'note': 'Ripgrep is not a tiny main demo: its application layer is substantial. Copy '
+                    'the dependency direction, not its size.',
+            'own': False},
+           {'type': 'real',
+            'h': 'Arguments become a struct',
+            'p': 'clap is an external crate. Its Parser derive generates parsing; `#[command]` '
+                 'sets app metadata and `#[arg(short, long)]` accepts short/long flag forms. '
+                 'Cli::parse reads the process arguments once, handling help and invalid input. A '
+                 'bool field records whether a switch was set. A tuple groups values by position, '
+                 'accessed with `.0`, `.1`, and so on; a struct names their roles. Handle help '
+                 'before expensive work.',
+            'code': 'use clap::Parser;\n'
+                    '\n'
+                    '#[derive(Parser)]\n'
+                    '#[command(version, about, long_about = None)]\n'
+                    'struct Cli {\n'
+                    '    #[arg(short, long)]\n'
+                    '    verbose: bool,\n'
+                    '}\n'
+                    '\n'
+                    'fn main() {\n'
+                    '    let cli = Cli::parse();\n'
+                    '\n'
+                    '    println!("verbose: {:?}", cli.verbose);\n'
+                    '}',
+            'repo': 'clap-rs/clap',
+            'tag': 'v4.5.20',
+            'path': 'examples/tutorial_derive/03_01_flag_bool.rs',
+            'lines': (1, 14),
+            'license': 'MIT',
+            'note': 'The exercises use only std. Turn raw text into named fields before the core '
+                    'sees it.',
+            'own': False},
+           {'type': 'real',
+            'h': 'The shell needs an outcome',
+            'p': "This is the tail of ripgrep's run function. It returns 0 for a match, 2 for an "
+                 'error, 1 for no match. A no-match result is normal search behavior. Exit '
+                 "meanings belong to the tool's contract.",
+            'code': '    Ok(if matched && (args.quiet() || !messages::errored()) {\n'
+                    '        ExitCode::from(0)\n'
+                    '    } else if messages::errored() {\n'
+                    '        ExitCode::from(2)\n'
+                    '    } else {\n'
+                    '        ExitCode::from(1)\n'
+                    '    })\n'
+                    '}',
+            'repo': 'BurntSushi/ripgrep',
+            'tag': '14.1.1',
+            'path': 'crates/core/main.rs',
+            'lines': (94, 101),
+            'license': 'MIT',
+            'note': '`std::process::ExitCode` can be returned from main; SUCCESS is zero, FAILURE '
+                    'is a portable failure, and ExitCode::from(u8) selects a code. Returning a '
+                    'nonzero code is different from printing a number.',
+            'own': False},
+           {'h': 'Acquire input at the boundary',
+            'p': '`std::env::args()` yields owned String arguments, including the executable name '
+                 'first; `.skip(1)` omits it. `.next()` returns the next item as Option. '
+                 '`into_iter()` consumes a collection to make an iterator. Simulate arguments in '
+                 'exercises so tests do not depend on the actual command line. eprintln! writes '
+                 'diagnostics to stderr; println! writes results to stdout.',
+            'code': 'fn main() {\n'
+                    '    let count = std::env::args().skip(1).count();\n'
+                    '    eprintln!("received {count} arguments");\n'
+                    '}',
+            'note': '`count()` consumes an iterator and returns its item count. Pure functions '
+                    'take data and return data: keep argument access, file access and printing in '
+                    'main, around a reusable library call.'}],
+ 'problems': [{'type': 'fill',
+               'prompt': 'The parser accepts a count; keep the core numeric. Fill the config field '
+                         'type.',
+               'code': 'struct Config { copies: __ }\n'
+                       'fn parse(s: &str) -> Config {\n'
+                       '    Config { copies: s.parse().unwrap() }\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    let cfg = parse("3");\n'
+                       '    println!("{}", cfg.copies * 4);\n'
+                       '}',
+               'bank': ['i32', 'String', 'bool'],
+               'answer': ['i32'],
+               'good': 'The count is converted once into an integer field.',
+               'bad': 'Which type lets the core multiply without parsing again?',
+               'output': ['12'],
+               'wrap': False},
+              {'type': 'better',
+               'prompt': 'Both store a label and a quiet switch. Which representation makes '
+                         'callers less likely to confuse the settings?',
+               'a': 'fn settings() -> (String, bool) {\n'
+                    '    (String::from("scan"), true)\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let c = settings();\n'
+                    '    println!("{} {}", c.0, c.1);\n'
+                    '}',
+               'b': 'struct Args { label: String, quiet: bool }\n'
+                    'fn settings() -> Args {\n'
+                    '    Args {\n'
+                    '        label: String::from("scan"),\n'
+                    '        quiet: true,\n'
+                    '    }\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let c = settings();\n'
+                    '    println!("{} {}", c.label, c.quiet);\n'
+                    '}',
+               'answer': 'b',
+               'lint': None,
+               'good': 'Named fields carry meaning at each use. A tuple does work, but readers '
+                       'must remember each position.',
+               'bad': 'Judge clarity for callers, not whether either sample works.',
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'These strings simulate env::args. Which argument reaches the parser?',
+               'code': 'let raw = vec!["finder", "--quiet", "x"];\n'
+                       'let mut args = raw.into_iter().skip(1);\n'
+                       'println!("{}", args.next().unwrap());',
+               'bank': ['finder', '--quiet', 'src'],
+               'answer': ['--quiet'],
+               'good': 'skip(1) removes the executable name, not the first user option.',
+               'bad': 'next takes one item from the remaining iterator.',
+               'wrap': True},
+              {'type': 'fill',
+               'prompt': 'Return success after checking the result. This run must print done and '
+                         'exit successfully.',
+               'code': 'use std::process::ExitCode;\n'
+                       'fn main() -> ExitCode {\n'
+                       '    let written = 2;\n'
+                       '    if written > 0 {\n'
+                       '        println!("done");\n'
+                       '        ExitCode::__\n'
+                       '    } else {\n'
+                       '        ExitCode::FAILURE\n'
+                       '    }\n'
+                       '}',
+               'bank': ['SUCCESS', 'FAILURE'],
+               'answer': ['SUCCESS'],
+               'good': 'SUCCESS tells the shell that work completed.',
+               'bad': 'The checker runs the program too: a failure exit does not count as success.',
+               'output': ['done'],
+               'wrap': False},
+              {'type': 'error',
+               'prompt': 'The core accepts parsed data. Which line mistakenly sends raw text '
+                         'instead?',
+               'code': 'struct Config { limit: i32 }\n'
+                       'fn run(c: Config) -> i32 { c.limit * 2 }\n'
+                       'fn main() {\n'
+                       '    let raw = "5";\n'
+                       '    println!("{}", run(raw));\n'
+                       '}',
+               'line': 5,
+               'error_code': 'E0308',
+               'good': 'run requires Config, so the boundary must construct one first.',
+               'bad': 'Look at the argument type required by run.',
+               'wrap': False},
+              {'type': 'order',
+               'prompt': 'Wire a reusable library call to the output at the edge.',
+               'head': ['mod logic {',
+                        '    pub fn area(n: i32) -> i32 { n * n }',
+                        '}',
+                        'fn main() {'],
+               'pool': ['let side = 7;', 'let result = logic::area(side);', 'println!("{result}");'],
+               'tail': ['}'],
+               'output': ['49'],
+               'good': 'Input, library calculation, then presentation.',
+               'bad': "Each stage consumes the previous stage's value."},
+              {'type': 'better',
+               'prompt': 'A real scan is expensive. Both stand-ins print usage for help. Which '
+                         'keeps scanning behind the normal-work branch?',
+               'a': 'fn scan() -> i32 { (1..10).sum() }\n'
+                    'fn main() {\n'
+                    '    let help = true;\n'
+                    '    if help {\n'
+                    '        println!("usage");\n'
+                    '    } else {\n'
+                    '        println!("{}", scan());\n'
+                    '    }\n'
+                    '}',
+               'b': 'fn scan() -> i32 { (1..10).sum() }\n'
+                    'fn main() {\n'
+                    '    let help = true;\n'
+                    '    let count = scan();\n'
+                    '    if help {\n'
+                    '        println!("usage");\n'
+                    '    } else {\n'
+                    '        println!("{count}");\n'
+                    '    }\n'
+                    '}',
+               'answer': 'a',
+               'lint': None,
+               'good': 'Dispatching help first avoids running the scan for a request that only '
+                       'needs instructions. Both versions produce the requested output.',
+               'bad': 'Trace whether scan runs before the help branch.',
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'This tool uses ripgrep-style status meanings. It found no matches and '
+                         'had no error. What status number does this helper choose?',
+               'code': 'fn status(found: bool, failed: bool) -> u8 {\n'
+                       '    if failed { 2 }\n'
+                       '    else if found { 0 }\n'
+                       '    else { 1 }\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    println!("{}", status(false, false));\n'
+                       '}',
+               'bank': ['0', '1', '2'],
+               'answer': ['1'],
+               'good': 'No match is a distinct normal outcome; an error would be 2. This prints '
+                       'the choice to make it testable; main would return ExitCode::from(choice).',
+               'bad': 'Follow the branch for neither found nor failed.',
+               'wrap': False}]})
+
+COURSE.append({'part': 2,
+ 'id': 'cli-rules',
+ 'title': 'A command-line tool: rules',
+ 'summary': 'Parse once, keep errors useful, and test a pure core.',
+ 'cards': [{'type': 'real',
+            'h': 'Application errors collect context',
+            'p': 'anyhow::Result is an external-crate result used to propagate different error '
+                 'types with useful context for a person. This application function dispatches a '
+                 'parsed result; it is not a library error contract. The special mode covers '
+                 'requests such as help.',
+            'code': 'fn run(result: crate::flags::ParseResult<HiArgs>) -> anyhow::Result<ExitCode> '
+                    '{\n'
+                    '    use crate::flags::{Mode, ParseResult};\n'
+                    '\n'
+                    '    let args = match result {\n'
+                    '        ParseResult::Err(err) => return Err(err),\n'
+                    '        ParseResult::Special(mode) => return special(mode),\n'
+                    '        ParseResult::Ok(args) => args,\n'
+                    '    };',
+            'repo': 'BurntSushi/ripgrep',
+            'tag': '14.1.1',
+            'path': 'crates/core/main.rs',
+            'lines': (77, 84),
+            'license': 'MIT',
+            'note': 'An anyhow-style main reports failures from many layers. A library usually '
+                    'returns a concrete error type so callers can decide what to do, instead of '
+                    'interpreting message strings. Our std exercises use Result and typed enums.',
+            'own': False},
+           {'type': 'real',
+            'h': 'Library errors keep their identity',
+            'p': 'globset stores the original pattern and an ErrorKind. Its callers can inspect '
+                 'structured failure information. Deriving Debug helps diagnostics; Eq and '
+                 'PartialEq enable comparisons. ErrorKind is an enum defined just below this '
+                 'excerpt.',
+            'code': '/// Represents an error that can occur when parsing a glob pattern.\n'
+                    '#[derive(Clone, Debug, Eq, PartialEq)]\n'
+                    'pub struct Error {\n'
+                    '    /// The original glob provided by the caller.\n'
+                    '    glob: Option<String>,\n'
+                    '    /// The kind of error.\n'
+                    '    kind: ErrorKind,\n'
+                    '}',
+            'repo': 'BurntSushi/ripgrep',
+            'tag': '14.1.1',
+            'path': 'crates/globset/src/lib.rs',
+            'lines': (142, 149),
+            'license': 'MIT',
+            'note': 'Keep variants for failures callers need to distinguish. From converts a '
+                    'lower-level error into a library error; ? uses that conversion. '
+                    'Human-readable context belongs at the reporting boundary.',
+            'own': False},
+           {'type': 'real',
+            'h': 'Parse and validate once',
+            'p': 'The value_parser macro selects a u16 parser, and range(1..) rejects zero. u16 is '
+                 'an unsigned 16-bit integer. The core receives a valid port, not a String to '
+                 'parse repeatedly. These macros are clap APIs; no external crates appear in our '
+                 'problems.',
+            'code': 'use clap::Parser;\n'
+                    '\n'
+                    '#[derive(Parser)]\n'
+                    '#[command(version, about, long_about = None)]\n'
+                    'struct Cli {\n'
+                    '    /// Network port to use\n'
+                    '    #[arg(value_parser = clap::value_parser!(u16).range(1..))]\n'
+                    '    port: u16,\n'
+                    '}\n'
+                    '\n'
+                    'fn main() {\n'
+                    '    let cli = Cli::parse();\n'
+                    '\n'
+                    '    println!("PORT = {}", cli.port);\n'
+                    '}',
+            'repo': 'clap-rs/clap',
+            'tag': 'v4.5.20',
+            'path': 'examples/tutorial_derive/04_02_parse.rs',
+            'lines': (1, 15),
+            'license': 'MIT',
+            'note': 'Reject invalid input before running work. Do not silently substitute a valid '
+                    'setting for invalid user input unless the CLI contract explicitly asks for '
+                    'that.',
+            'own': False},
+           {'h': 'A pure core is easy to test',
+            'p': 'Keep I/O at the edges: main reads and writes, while the core accepts borrowed '
+                 'data and returns a value or typed error. Use &str for text the core only reads; '
+                 '&String unnecessarily requires an owned String at the call site. A borrowed '
+                 'config lets multiple operations read it without moving it.',
+            'code': 'fn remaining(total: i32, used: i32) -> i32 {\n'
+                    '    total - used\n'
+                    '}\n'
+                    '#[test]\n'
+                    'fn no_use() {\n'
+                    '    assert_eq!(remaining(9, 0), 9);\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let left = remaining(9, 2);\n'
+                    '    println!("{left}");\n'
+                    '}',
+            'note': 'Clippy is a compiler companion that flags working code with avoidable '
+                    'problems. clippy::ptr_arg flags &String parameters when &str is enough. A '
+                    'test should check a boundary case, not depend on the process arguments or '
+                    'filesystem.'}],
+ 'problems': [{'type': 'better',
+               'prompt': 'Both calculate the total for two batches. Which keeps parsing at the '
+                         'boundary as the number of operations grows?',
+               'a': 'struct Config { size: i32 }\n'
+                    'fn batch(c: &Config, n: i32) -> i32 {\n'
+                    '    c.size * n\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let c = Config {\n'
+                    '        size: "6".parse().unwrap(),\n'
+                    '    };\n'
+                    '    let total = batch(&c, 2) + batch(&c, 3);\n'
+                    '    println!("{total}");\n'
+                    '}',
+               'b': 'fn batch(raw: &str, n: i32) -> i32 {\n'
+                    '    let size: i32 = raw.parse().unwrap();\n'
+                    '    size * n\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let first = batch("6", 2);\n'
+                    '    let total = first + batch("6", 3);\n'
+                    '    println!("{total}");\n'
+                    '}',
+               'answer': 'a',
+               'lint': None,
+               'good': 'One conversion produces a typed config shared by operations. Repeated '
+                       'parsing does the sample job, but couples every operation to input syntax.',
+               'bad': 'Count conversions as more operations are added.',
+               'wrap': False},
+              {'type': 'fill',
+               'prompt': 'Keep the parser error typed. Which library error variant lets ? convert '
+                         'a failed integer parse?',
+               'code': 'use std::num::ParseIntError;\n'
+                       '#[derive(Debug)]\n'
+                       'enum ArgError { Number(ParseIntError) }\n'
+                       'impl From<ParseIntError> for ArgError {\n'
+                       '    fn from(e: ParseIntError) -> Self {\n'
+                       '        Self::__(e)\n'
+                       '    }\n'
+                       '}\n'
+                       'fn count(s: &str) -> Result<i32, ArgError> {\n'
+                       '    Ok(s.parse()?)\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    println!("{}", count("8").unwrap());\n'
+                       '    match count("bad") {\n'
+                       '        Err(ArgError::Number(_)) => {\n'
+                       '            println!("bad count");\n'
+                       '        }\n'
+                       '        Ok(n) => println!("{n}"),\n'
+                       '    }\n'
+                       '}',
+               'bank': ['Number', 'Missing', 'Ok'],
+               'answer': ['Number'],
+               'good': 'The variant retains the source error; From lets ? return an ArgError.',
+               'bad': 'The conversion must construct the enum, not a different Result.',
+               'output': ['8', 'bad count'],
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'A caller can recover by matching a typed reason. What does the boundary '
+                         'print?',
+               'code': 'enum InputError { Missing, Invalid }\n'
+                       'fn parse(s: &str)\n'
+                       '    -> Result<i32, InputError>\n'
+                       '{\n'
+                       '    if s.is_empty() {\n'
+                       '        return Err(InputError::Missing);\n'
+                       '    }\n'
+                       '    Err(InputError::Invalid)\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    match parse("") {\n'
+                       '        Ok(n) => println!("{n}"),\n'
+                       '        Err(InputError::Missing) => {\n'
+                       '            println!("usage");\n'
+                       '        }\n'
+                       '        Err(InputError::Invalid) => {\n'
+                       '            println!("invalid");\n'
+                       '        }\n'
+                       '    }\n'
+                       '}',
+               'bank': ['usage', 'invalid', '0'],
+               'answer': ['usage'],
+               'good': 'The library preserves the reason. Main selects guidance without comparing '
+                       'message text.',
+               'bad': 'The early return determines the variant.',
+               'wrap': False},
+              {'type': 'smell',
+               'prompt': 'Which parameter needlessly requires an owned text type? Find '
+                         'clippy::ptr_arg.',
+               'code': 'fn width(s: &String) -> usize {\n'
+                       '    s.len()\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    let name = String::from("abc");\n'
+                       '    println!("{}", width(&name));\n'
+                       '}',
+               'line': 1,
+               'lint': 'clippy::ptr_arg',
+               'fixed': 'fn width(s: &str) -> usize {\n'
+                        '    s.len()\n'
+                        '}\n'
+                        'fn main() {\n'
+                        '    let name = String::from("abc");\n'
+                        '    println!("{}", width(&name));\n'
+                        '}',
+               'good': '&str accepts borrowed text from a String or a literal; the core needs no '
+                       'owned-string capability.',
+               'bad': 'Look at what the function actually does with its parameter.',
+               'wrap': False},
+              {'type': 'better',
+               'prompt': 'The CLI prints a checksum; a future GUI must display it too. Which '
+                         'design makes the calculation reusable without capturing stdout?',
+               'a': 'fn checksum(nums: &[i32]) {\n'
+                    '    let sum: i32 = nums.iter().sum();\n'
+                    '    println!("{sum}");\n'
+                    '}\n'
+                    'fn main() { checksum(&[2, 7]); }',
+               'b': 'fn checksum(nums: &[i32]) -> i32 {\n'
+                    '    nums.iter().sum()\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let sum = checksum(&[2, 7]);\n'
+                    '    println!("{sum}");\n'
+                    '}',
+               'answer': 'b',
+               'lint': None,
+               'good': 'Returning a value lets each interface choose how to present it. Printing '
+                       "in the helper works for today's CLI but couples the core to stdout.",
+               'bad': 'Which version lets a GUI use the result as data?',
+               'wrap': False},
+              {'type': 'order',
+               'prompt': 'Reject negative input before calculating. Arrange the parser body.',
+               'head': ['fn positive(n: i32)', '    -> Result<i32, String>', '{'],
+               'pool': ['if n < 0 {',
+                        '    return Err(String::from("negative"));',
+                        '}',
+                        'Ok(n * 2)'],
+               'tail': ['}', 'fn main() {', '    println!("{:?}", positive(3));',
+                        '    println!("{:?}", positive(-3));', '}'],
+               'output': ['Ok(6)', 'Err("negative")'],
+               'good': 'Validation happens before the core transformation, and invalid input stays '
+                       'an error.',
+               'bad': 'Ok must be the final expression after the rejection guard.'},
+              {'type': 'error',
+               'prompt': 'The same config must serve two operations. Which line tries to reuse a '
+                         'moved config?',
+               'code': 'struct Config { path: String }\n'
+                       'fn run(c: Config) {\n'
+                       '    println!("{}", c.path);\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    let c = Config {\n'
+                       '        path: String::from("input"),\n'
+                       '    };\n'
+                       '    run(c);\n'
+                       '    run(c);\n'
+                       '}',
+               'line': 10,
+               'error_code': 'E0382',
+               'good': 'The first run takes ownership. Borrow &Config when operations only read '
+                       'it.',
+               'bad': 'The config contains a String and is not Copy.',
+               'wrap': False},
+              {'type': 'fill',
+               'prompt': 'Test the pure core at the empty-input boundary. Fill the expected value.',
+               'code': 'fn total_bytes(s: &str, n: usize)\n'
+                       '    -> usize\n'
+                       '{\n'
+                       '    s.len() * n\n'
+                       '}\n'
+                       '#[test]\n'
+                       'fn empty_input() {\n'
+                       '    assert_eq!(total_bytes("", 4), __);\n'
+                       '}\n'
+                       'fn main() { println!("checked"); }',
+               'bank': ['0', '4', '1'],
+               'answer': ['0'],
+               'good': 'The test checks empty input without files or process arguments; even four '
+                       'copies of empty text contain zero bytes.',
+               'bad': 'A boundary test must assert the actual contract.',
+               'output': ['checked'],
+               'wrap': False}]})
+
 # Part 3: R2/R3 insert lessons before this block; keep review ids stable.
 # Cards introduce extra APIs with different examples from the problems.
 

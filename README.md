@@ -93,6 +93,16 @@ Lesson 16, "Fix the compiler", adapts puzzles from Akira Nishikawa's Rust Compil
 under the MIT license, © 2010 The Rust Project Developers. The snippet was checked against
 that tag's raw file. The [MIT notice](licenses/rayon-MIT.txt) is included with this app.
 
+The command-line lessons quote [ripgrep 14.1.1](https://github.com/BurntSushi/ripgrep/tree/14.1.1)
+(Cargo workspace, exit status, application dispatch, globset error structure), under the MIT
+license, © 2015 Andrew Gallant. The [MIT notice](licenses/ripgrep-MIT.txt) is included.
+
+They also quote [clap v4.5.20](https://github.com/clap-rs/clap/tree/v4.5.20)
+(derive examples for boolean flags and typed parsing), under the MIT license,
+© Individual contributors. The [MIT notice](licenses/clap-MIT.txt) is included.
+Both projects offer alternative licenses; these excerpts use their MIT terms.
+Every card links to its exact file and line range at the release tag.
+
 ## Running it locally
 
 ```sh
