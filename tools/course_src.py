@@ -3335,6 +3335,830 @@ COURSE.append({'part': 2,
 # Cards introduce extra APIs with different examples from the problems.
 
 # Part 3 / 31
+COURSE.append({'part': 2,
+ 'id': 'server-structure',
+ 'title': 'A web server: structure',
+ 'summary': 'Routes, extractors, shared state, and the service/storage boundary.',
+ 'cards': [{'type': 'real',
+            'h': 'The router chooses a handler',
+            'p': 'A server receives requests and returns responses. A router maps a method (GET '
+                 'reads, POST submits) and URL route to a handler function. These axum examples '
+                 'are reading knowledge, not programs for our checker. A growing application '
+                 'separates handler → service → storage: HTTP translation → business rules → data '
+                 'access. Small examples sometimes combine layers.',
+            'code': '    // build our application with a route\n'
+                    '    let app = Router::new()\n'
+                    '        // `GET /` goes to `root`\n'
+                    '        .route("/", get(root))\n'
+                    '        // `POST /users` goes to `create_user`\n'
+                    '        .route("/users", post(create_user));',
+            'repo': 'tokio-rs/axum',
+            'tag': 'axum-v0.7.9',
+            'path': 'examples/readme/src/main.rs',
+            'lines': (20, 25),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'type': 'real',
+            'h': 'Extractors turn a request into data',
+            'p': 'Json(payload) is an axum extractor: it decodes a JSON request body into a typed '
+                 'value before the handler runs. Path extracts URL parameters; State supplies '
+                 'shared application state. IntoResponse turns a returned value into an HTTP '
+                 'response. Keep handlers thin: extract, call a service, convert its result. A '
+                 'service should not need HTTP types.',
+            'code': 'async fn create_user(\n'
+                    '    // this argument tells axum to parse the request body\n'
+                    '    // as JSON into a `CreateUser` type\n'
+                    '    Json(payload): Json<CreateUser>,\n'
+                    ') -> impl IntoResponse {\n'
+                    '    // insert your application logic here\n'
+                    '    let user = User {\n'
+                    '        id: 1337,\n'
+                    '        username: payload.username,\n'
+                    '    };\n'
+                    '\n'
+                    '    // this will be converted into a JSON response\n'
+                    '    // with a status code of `201 Created`\n'
+                    '    (StatusCode::CREATED, Json(user))\n'
+                    '}',
+            'repo': 'tokio-rs/axum',
+            'tag': 'axum-v0.7.9',
+            'path': 'examples/readme/src/main.rs',
+            'lines': (40, 54),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'type': 'real',
+            'h': 'Share ownership, protect mutation',
+            'p': 'SharedState is an alias for Arc<RwLock<AppState>>. Arc shares one state, not '
+                 'independent copies. RwLock allows multiple readers or one writer; Mutex allows '
+                 'one holder. This tiny example reads storage in the handler; a larger app can '
+                 'move lookup behind a service. A handler may return Result: here a missing key '
+                 'becomes NOT_FOUND (404).',
+            'code': 'type SharedState = Arc<RwLock<AppState>>;\n'
+                    '\n'
+                    '#[derive(Default)]\n'
+                    'struct AppState {\n'
+                    '    db: HashMap<String, Bytes>,\n'
+                    '}\n'
+                    '\n'
+                    'async fn kv_get(\n'
+                    '    Path(key): Path<String>,\n'
+                    '    State(state): State<SharedState>,\n'
+                    ') -> Result<Bytes, StatusCode> {\n'
+                    '    let db = &state.read().unwrap().db;\n'
+                    '\n'
+                    '    if let Some(value) = db.get(&key) {\n'
+                    '        Ok(value.clone())\n'
+                    '    } else {\n'
+                    '        Err(StatusCode::NOT_FOUND)\n'
+                    '    }\n'
+                    '}',
+            'repo': 'tokio-rs/axum',
+            'tag': 'axum-v0.7.9',
+            'path': 'examples/key-value-store/src/main.rs',
+            'lines': (84, 102),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'h': 'Practice the boundaries with std',
+            'p': 'The problems simulate requests and responses with structs, not HTTP. A storage '
+                 'trait defines data access; a service uses it to enforce a rule. Thread + '
+                 'Arc<Mutex<_>> exercises shared ownership only. It does not test async '
+                 'scheduling. A response status is a number here: 200 success, 400 bad input, 404 '
+                 'missing, 500 internal failure. Three spellings you will meet: &impl Stock is '
+                 'a reference to any type with that trait; &*guard borrows the value inside a '
+                 'lock guard; 404_i32 is 404 written as an i32.',
+            'code': 'trait Stock { fn available(&self) -> i32; }\n'
+                    'struct Shelf;\n'
+                    'impl Stock for Shelf {\n'
+                    '    fn available(&self) -> i32 { 12 }\n'
+                    '}\n'
+                    'fn can_ship(s: &impl Stock) -> bool {\n'
+                    '    s.available() > 0\n'
+                    '}\n'
+                    'println!("{}", can_ship(&Shelf));',
+            'note': None}],
+ 'problems': [{'type': 'fill',
+               'prompt': 'Forward the request limit, not a fixed value.',
+               'code': 'struct Request { limit: i32 }\n'
+                       'struct Response { count: i32 }\n'
+                       'fn handle(r: Request) -> Response {\n'
+                       '    Response { count: __ }\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    let r = Request { limit: 7 };\n'
+                       '    println!("{}", handle(r).count);\n'
+                       '}',
+               'bank': ['r.limit', '0', '1'],
+               'answer': ['r.limit'],
+               'good': 'A handler translates the actual input into the response.',
+               'bad': 'Which value comes from this request?',
+               'output': ['7'],
+               'wrap': False},
+              {'type': 'better',
+               'prompt': 'Both compute available stock. Which keeps the service independent of '
+                         'HTTP?',
+               'a': 'struct Response { count: i32 }\n'
+                    'fn stock() -> Response {\n'
+                    '    Response { count: 8 }\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    println!("{}", stock().count);\n'
+                    '}',
+               'b': 'struct Response { count: i32 }\n'
+                    'fn stock() -> i32 { 8 }\n'
+                    'fn handle() -> Response {\n'
+                    '    Response { count: stock() }\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    println!("{}", handle().count);\n'
+                    '}',
+               'answer': 'b',
+               'lint': None,
+               'good': 'B leaves response construction at the boundary; stock returns domain data.',
+               'bad': 'Which stock function could a CLI call without knowing Response?',
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'One route selects one handler. What is printed?',
+               'code': 'fn route(method: &str) -> i32 {\n'
+                       '    match method {\n'
+                       '        "GET" => 200,\n'
+                       '        "POST" => 201,\n'
+                       '        _ => 405,\n'
+                       '    }\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    println!("{}", route("POST"));\n'
+                       '    println!("{}", route("DELETE"));\n'
+                       '}',
+               'bank': ['200', '201', '404', '405'],
+               'answer': ['201', '405'],
+               'good': 'The method chooses the branch; unsupported methods get 405.',
+               'bad': 'Follow the matching method, then the fallback.',
+               'wrap': False},
+              {'type': 'fill',
+               'prompt': 'Make the service read through its storage contract.',
+               'code': 'trait Store { fn count(&self) -> i32; }\n'
+                       'struct Memory;\n'
+                       'impl Store for Memory {\n'
+                       '    fn count(&self) -> i32 { 6 }\n'
+                       '}\n'
+                       'fn remaining(s: &impl Store) -> i32 {\n'
+                       '    __ - 2\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    println!("{}", remaining(&Memory));\n'
+                       '}',
+               'bank': ['s.count()', '0', '2'],
+               'answer': ['s.count()'],
+               'good': 'The service applies its reservation rule to the stored count.',
+               'bad': 'Which expression reads storage?',
+               'output': ['4'],
+               'wrap': False},
+              {'type': 'error',
+               'prompt': 'Which line tries to send Rc state to a worker?',
+               'code': 'use std::rc::Rc;\n'
+                       'use std::thread;\n'
+                       'fn main() {\n'
+                       '    let total = Rc::new(4);\n'
+                       '    let job = thread::spawn(move || *total);\n'
+                       '    println!("{}", job.join().unwrap());\n'
+                       '}',
+               'line': 5,
+               'error_code': 'E0277',
+               'good': 'Rc cannot cross a thread boundary; Arc supports shared ownership between '
+                       'threads.',
+               'bad': 'Find where the closure and its captured Rc cross into a thread.',
+               'wrap': False},
+              {'type': 'order',
+               'prompt': 'Build a request, handle it, then print the returned count.',
+               'head': ['struct Request { count: i32 }',
+                        'fn handle(r: Request) -> i32 { r.count }',
+                        'fn main() {'],
+               'pool': ['    let request = Request { count: 9 };',
+                        '    let count = handle(request);',
+                        '    println!("{count}");'],
+               'tail': ['}'],
+               'output': ['9'],
+               'good': 'Each step needs the previous value.',
+               'bad': 'A response cannot be printed before it exists.'},
+              {'type': 'output',
+               'prompt': 'A worker updates shared request state. What does main print?',
+               'code': 'use std::sync::{Arc, Mutex};\n'
+                       'use std::thread;\n'
+                       'fn main() {\n'
+                       '    let hits = Arc::new(Mutex::new(2));\n'
+                       '    let worker_hits = Arc::clone(&hits);\n'
+                       '    let job = thread::spawn(move || {\n'
+                       '        *worker_hits.lock().unwrap() += 3;\n'
+                       '    });\n'
+                       '    job.join().unwrap();\n'
+                       '    println!("{}", *hits.lock().unwrap());\n'
+                       '}',
+               'bank': ['2', '3', '5', '8'],
+               'answer': ['5'],
+               'good': 'Both owners reach the same Mutex. Joining finishes the update before '
+                       'reading.',
+               'bad': 'Arc::clone does not clone the protected count.',
+               'wrap': False},
+              {'type': 'better',
+               'prompt': 'Both return the total. Which names the request fields so a caller can '
+                         'judge their roles?',
+               'a': 'struct Request { saved: i32, added: i32 }\n'
+                    'fn total(r: Request) -> i32 {\n'
+                    '    r.saved + r.added\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let r = Request { saved: 3, added: 4 };\n'
+                    '    println!("{}", total(r));\n'
+                    '}',
+               'b': 'fn total(r: (i32, i32)) -> i32 {\n'
+                    '    r.0 + r.1\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    println!("{}", total((3, 4)));\n'
+                    '}',
+               'answer': 'a',
+               'lint': None,
+               'good': 'Named fields describe the contract; positional fields require remembering '
+                       'their meaning.',
+               'bad': 'Which caller explains what each number represents?',
+               'wrap': False}]})
+
+COURSE.append({'part': 2,
+ 'id': 'server-rules',
+ 'title': 'A web server: rules',
+ 'summary': 'Read async code; keep locks short and convert typed errors at the boundary.',
+ 'cards': [{'type': 'real',
+            'h': 'A command delegates to storage',
+            'p': 'mini-redis is a TCP server, not HTTP, but the same boundary applies: its Get '
+                 'command asks Db for data and then writes a protocol response. Read async fn as a '
+                 'function that returns a future: work that can be driven to completion. Calling '
+                 'it does not run its body immediately. At .await, the current task waits for a '
+                 'future; if it is not ready, the runtime can run other tasks on that worker.',
+            'code': '    pub(crate) async fn apply(self, db: &Db, dst: &mut Connection) -> '
+                    'crate::Result<()> {\n'
+                    '        // Get the value from the shared database state\n'
+                    '        let response = if let Some(value) = db.get(&self.key) {\n'
+                    '            // If a value is present, it is written to the client in "bulk"\n'
+                    '            // format.\n'
+                    '            Frame::Bulk(value)\n'
+                    '        } else {\n'
+                    '            // If there is no value, `Null` is written.\n'
+                    '            Frame::Null\n'
+                    '        };\n'
+                    '\n'
+                    '        debug!(?response);\n'
+                    '\n'
+                    '        // Write the response back to the client\n'
+                    '        dst.write_frame(&response).await?;\n'
+                    '\n'
+                    '        Ok(())\n'
+                    '    }',
+            'repo': 'tokio-rs/mini-redis',
+            'tag': 'v0.3.0',
+            'path': 'src/cmd/get.rs',
+            'lines': (64, 81),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'type': 'real',
+            'h': 'Return data without the guard',
+            'p': 'Db::get locks, copies a Bytes handle, and returns owned data. The guard ends '
+                 'with this function, before apply reaches its network .await. Bytes is an '
+                 'external crate type with a cheap shared-data clone. Keep a synchronous lock '
+                 'short; holding it across .await may deadlock or delay unrelated requests, and '
+                 'can make a future unsuitable for axum. Even an async mutex can cause long waits '
+                 'if held during unrelated I/O.',
+            'code': '    pub(crate) fn get(&self, key: &str) -> Option<Bytes> {\n'
+                    '        // Acquire the lock, get the entry and clone the value.\n'
+                    '        //\n'
+                    '        // Because data is stored using `Bytes`, a clone here is a shallow\n'
+                    '        // clone. Data is not copied.\n'
+                    '        let state = self.shared.state.lock().unwrap();\n'
+                    '        state.entries.get(key).map(|entry| entry.data.clone())\n'
+                    '    }',
+            'repo': 'tokio-rs/mini-redis',
+            'tag': 'v0.3.0',
+            'path': 'src/db.rs',
+            'lines': (121, 128),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'type': 'real',
+            'h': 'One conversion for application errors',
+            'p': 'This match is inside AppError::into_response. Invalid JSON uses its rejection '
+                 'status; a library failure is logged and becomes a generic 500 response. Typed '
+                 'errors retain meaning inside the app, then one boundary decides status and '
+                 'public message. Avoid copying this decision into every handler.',
+            'code': '        let (status, message) = match self {\n'
+                    '            AppError::JsonRejection(rejection) => {\n'
+                    "                // This error is caused by bad user input so don't log it\n"
+                    '                (rejection.status(), rejection.body_text())\n'
+                    '            }\n'
+                    '            AppError::TimeError(err) => {\n'
+                    '                // Because `TraceLayer` wraps each request in a span that '
+                    'contains the request\n'
+                    "                // method, uri, etc we don't need to include those details "
+                    'here\n'
+                    '                tracing::error!(%err, "error from time_library");\n'
+                    '\n'
+                    "                // Don't expose any details about the error to the client\n"
+                    '                (\n'
+                    '                    StatusCode::INTERNAL_SERVER_ERROR,\n'
+                    '                    "Something went wrong".to_owned(),\n'
+                    '                )\n'
+                    '            }\n'
+                    '        };\n'
+                    '\n'
+                    '        (status, AppJson(ErrorResponse { message })).into_response()',
+            'repo': 'tokio-rs/axum',
+            'tag': 'axum-v0.7.9',
+            'path': 'examples/error-handling/src/main.rs',
+            'lines': (166, 184),
+            'license': 'MIT',
+            'note': None,
+            'own': False},
+           {'h': 'Do not block an async worker',
+            'p': 'Reading knowledge: synchronous disk calls, thread::sleep, and long CPU loops '
+                 'occupy the worker instead of yielding. Prefer async I/O, or move synchronous '
+                 'work to tokio::task::spawn_blocking and await its result. Our std problems can '
+                 'prove lock lifetime and error mapping, not runtime responsiveness. '
+                 'Result::unwrap_or supplies a fallback on Err. std::sync::Mutex::try_lock '
+                 'attempts acquisition without waiting and returns Result; .is_ok() tests for Ok. '
+                 'This lets an exercise observe whether a lock was released.',
+            'code': 'use std::sync::Mutex;\n'
+                    'let gate = Mutex::new(11);\n'
+                    '{\n'
+                    '    let held = gate.lock().unwrap();\n'
+                    '    println!("{}", *held);\n'
+                    '}\n'
+                    'println!("{}", gate.try_lock().is_ok());',
+            'note': None}],
+ 'problems': [{'type': 'fill',
+               'prompt': 'Map a missing record to 404 in this one conversion.',
+               'code': 'enum Failure { Missing, Busy }\n'
+                       'fn status(e: Failure) -> i32 {\n'
+                       '    match e {\n'
+                       '        Failure::Missing => __,\n'
+                       '        Failure::Busy => 503,\n'
+                       '    }\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    println!("{}", status(Failure::Missing));\n'
+                       '    println!("{}", status(Failure::Busy));\n'
+                       '}',
+               'bank': ['400', '404', '500'],
+               'answer': ['404'],
+               'good': 'The typed reason selects the public status at the boundary.',
+               'bad': 'Missing is different from invalid input or an internal failure.',
+               'output': ['404', '503'],
+               'wrap': False},
+              {'type': 'better',
+               'prompt': 'Both return 500. Which preserves an error reason inside the service?',
+               'a': 'enum Failure { Unavailable }\n'
+                    'fn load() -> Result<i32, Failure> {\n'
+                    '    Err(Failure::Unavailable)\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let status = match load() {\n'
+                    '        Ok(_) => 200,\n'
+                    '        Err(Failure::Unavailable) => 500,\n'
+                    '    };\n'
+                    '    println!("{status}");\n'
+                    '}',
+               'b': 'fn load() -> Result<i32, i32> {\n'
+                    '    Err(500)\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let status = match load() {\n'
+                    '        Ok(_) => 200,\n'
+                    '        Err(status) => status,\n'
+                    '    };\n'
+                    '    println!("{status}");\n'
+                    '}',
+               'answer': 'a',
+               'lint': None,
+               'good': 'A returns a domain reason; only the boundary knows its HTTP meaning.',
+               'bad': 'Which service could a non-HTTP caller interpret by reason?',
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'Is the lock free after this snapshot is taken?',
+               'code': 'use std::sync::Mutex;\n'
+                       'fn main() {\n'
+                       '    let rows = Mutex::new(6);\n'
+                       '    let snapshot = {\n'
+                       '        let guard = rows.lock().unwrap();\n'
+                       '        *guard\n'
+                       '    };\n'
+                       '    println!("{snapshot}");\n'
+                       '    println!("{}", rows.try_lock().is_ok());\n'
+                       '}',
+               'bank': ['6', 'true', 'false'],
+               'answer': ['6', 'true'],
+               'good': 'The block returns the copied count and drops the guard. This is a '
+                       'synchronous lifetime check.',
+               'bad': 'The snapshot is an integer, not a guard.',
+               'wrap': False},
+              {'type': 'error',
+               'prompt': 'Which line returns a reference tied to a local lock guard?',
+               'code': 'use std::sync::Mutex;\n'
+                       'fn read(rows: &Mutex<i32>) -> &i32 {\n'
+                       '    let guard = rows.lock().unwrap();\n'
+                       '    &*guard\n'
+                       '}\n'
+                       'fn main() {}',
+               'line': 4,
+               'error_code': 'E0515',
+               'good': 'The guard is local; return owned data rather than a borrow that would '
+                       'outlive the guard.',
+               'bad': 'The caller cannot retain access after this local guard is dropped.',
+               'wrap': False},
+              {'type': 'order',
+ 'prompt': 'Reserve two units and read the remaining stock under the same guard.',
+ 'head': ['use std::sync::Mutex;', 'fn main() {', '    let stock = Mutex::new(6);'],
+ 'pool': ['    let mut guard = stock.lock().unwrap();',
+          '    *guard -= 2;',
+          '    let remaining = *guard;',
+          '    println!("{remaining}");'],
+ 'tail': ['}'],
+ 'output': ['4'],
+ 'good': 'The same guard protects the read-modify-read sequence. Reading before subtraction would '
+         'report stale stock.',
+ 'bad': 'The reservation must change the protected count before taking its result.'},
+              {'type': 'smell',
+               'prompt': 'Find the needless clone of a Copy status number.',
+               'code': 'let status = 404_i32;\n'
+                       'let response = status.clone();\n'
+                       'println!("{response}");',
+               'line': 2,
+               'lint': 'clippy::clone_on_copy',
+               'fixed': 'let status = 404_i32;\nlet response = status;\nprintln!("{response}");',
+               'good': 'Integers copy on assignment; clone adds no ownership benefit.',
+               'bad': 'Which value already implements Copy?',
+               'wrap': True},
+              {'type': 'better',
+               'prompt': 'Both charge a reservation fee. Which keeps the handler thin as the rule '
+                         'grows?',
+               'a': 'struct Request { units: i32 }\n'
+                    'fn handle(r: Request) -> i32 {\n'
+                    '    let n = r.units;\n'
+                    '    let fee = if n > 5 { 2 } else { 1 };\n'
+                    '    r.units + fee\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let r = Request { units: 7 };\n'
+                    '    println!("{}", handle(r));\n'
+                    '}',
+               'b': 'struct Request { units: i32 }\n'
+                    'fn reserve(units: i32) -> i32 {\n'
+                    '    let fee = if units > 5 { 2 } else { 1 };\n'
+                    '    units + fee\n'
+                    '}\n'
+                    'fn handle(r: Request) -> i32 {\n'
+                    '    reserve(r.units)\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let r = Request { units: 7 };\n'
+                    '    println!("{}", handle(r));\n'
+                    '}',
+               'answer': 'b',
+               'lint': None,
+               'good': 'B puts the business rule in reserve, usable without Request.',
+               'bad': 'Which rule can another interface reuse?',
+               'wrap': False},
+              {'type': 'fill',
+               'prompt': 'Propagate storage failure before adding the service adjustment.',
+               'code': '#[derive(Debug)]\n'
+                       'enum Failure { Offline }\n'
+                       'fn read() -> Result<i32, Failure> {\n'
+                       '    Err(Failure::Offline)\n'
+                       '}\n'
+                       'fn total() -> Result<i32, Failure> {\n'
+                       '    let count = read()__;\n'
+                       '    Ok(count + 1)\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    println!("{:?}", total());\n'
+                       '}',
+               'bank': ['?', '.unwrap()', '.unwrap_or(0)'],
+               'answer': ['?'],
+               'good': '? returns the storage error before success-only work; the alternatives '
+                       'panic or conceal the failure.',
+               'bad': 'A failed storage read must stay a failure.',
+               'output': ['Err(Offline)'],
+               'wrap': False}]})
+
+COURSE.append({'part': 2,
+ 'id': 'server-own',
+ 'title': 'Your own server',
+ 'summary': 'Judge the AI-built Websidian server against the same rules.',
+ 'cards': [{'type': 'real',
+            'h': 'Keep: the hub offloads blocking work',
+            'p': 'Websidian is your AI-built axum server. Main composes feature routers; apps hold '
+                 'feature behavior, readers gather data, and store owns writes. Its hub gathers '
+                 'data through readers and '
+                 'caches the response. Here answer runs on the blocking pool, then the async '
+                 'handler awaits the result and constructs a response. Unlike axum’s tiny '
+                 'in-memory example, this boundary is appropriate for synchronous readers. Keep '
+                 'it. This excerpt is display-only; no code in your server was run or changed. In '
+                 'std exercises, format! builds a String using the same placeholders as println!, '
+                 'without printing.',
+            'code': 'pub fn router(app: PathBuf) -> Router {\n'
+                    '    let cache: Cache = Arc::default();\n'
+                    "    let serve = |route: &'static str| {\n"
+                    '        let (app, cache) = (app.clone(), cache.clone());\n'
+                    '        get(move || async move {\n'
+                    '            let r = tokio::task::spawn_blocking(move || answer(&app, route, '
+                    '&cache)).await.unwrap_or_else(|e| Err(e.to_string()));\n'
+                    '            match r {\n'
+                    '                Ok(body) => ([(header::CONTENT_TYPE, "application/json")], '
+                    'body).into_response(),\n'
+                    "                // Any reader may fail: answer, don't drop.\n"
+                    '                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, '
+                    'Json(json!({"error": e}))).into_response(),\n'
+                    '            }\n'
+                    '        })\n'
+                    '    };',
+            'repo': None,
+            'tag': '911d8146d36be95d5022ba651cf340078e6073bf',
+            'path': 'src/hub.rs',
+            'lines': (70, 82),
+            'license': 'Owner permission',
+            'note': None,
+            'own': True},
+           {'type': 'real',
+            'h': 'Keep: the inbox router delegates',
+            'p': 'These route closures select operations; helpers such as raw and save do the work '
+                 'and answer formats the result. State extracts one shared app value, similar to '
+                 'axum’s state example. Keep the clear routing table and shared ownership. This '
+                 'alone does not make the synchronous helper calls safe for an async worker. URL '
+                 'routes here identify API operations, not files.',
+            'code': '    Router::new()\n'
+                    '        .route("/api/inbox", get(|State(a): App| async move { '
+                    'Json(listing(&a)) }))\n'
+                    '        .route("/api/staged", get(|State(a): App, uri: Uri| async move { '
+                    'staged(&a, &uri) }))\n'
+                    '        .route("/api/raw", get(|State(a): App, uri: Uri| async move { '
+                    'answer(raw(&a, &uri)) }))\n'
+                    '        .route("/api/drop", post(|State(a): App, h: HeaderMap, b: Bytes| '
+                    'async move { answer(drop(&a, &h, &b)) }))\n'
+                    '        .route("/api/note", post(|State(a): App, b: Bytes| async move { '
+                    'answer(note(&a, &b)) }))\n'
+                    '        .route("/api/save", post(|State(a): App, b: Bytes| async move { '
+                    'answer(save(&a, &b)) }))\n'
+                    '        .route("/api/move", post(|State(a): App, b: Bytes| async move { '
+                    'answer(move_(&a, &b)) }))\n'
+                    '        .route("/api/mkdir", post(|State(a): App, b: Bytes| async move { '
+                    'answer(mkdir(&a, &b)) }))\n'
+                    '        .route("/api/unstage", post(|State(a): App, b: Bytes| async move { '
+                    'answer(unstage(&a, &b)) }))\n'
+                    '        .layer(DefaultBodyLimit::disable())                     // a dropped '
+                    'video is as big as it is\n'
+                    '        .with_state(Arc::new(app))',
+            'repo': None,
+            'tag': '911d8146d36be95d5022ba651cf340078e6073bf',
+            'path': 'src/inbox.rs',
+            'lines': (534, 545),
+            'license': 'Owner permission',
+            'note': None,
+            'own': True},
+           {'type': 'real',
+            'h': 'Improve: move synchronous work off workers',
+            'p': 'These Knowledge closures call listing and graph directly inside async bodies. '
+                 'Reading their implementations shows synchronous filesystem and SQLite work. '
+                 'async move does not turn that work into async I/O. Follow the hub’s '
+                 'blocking-pool boundary, keeping handler → service → storage. No .await here '
+                 'means this is blocking work on a worker, not a demonstrated lock-across-await '
+                 'bug.',
+            'code': '        .route("/api/knowledge", get(move || async move { answer(listing(&a, '
+                    '&root(&a)).map(Some)) }))\n'
+                    '        .route("/api/knowledge/graph", get(move || async move { '
+                    'answer(graph(&b, &root(&b)).map(Some)) }))\n'
+                    '        .route("/api/knowledge/", get(|| async { answer(Ok(None)) }))',
+            'repo': None,
+            'tag': '911d8146d36be95d5022ba651cf340078e6073bf',
+            'path': 'src/knowledge.rs',
+            'lines': (485, 487),
+            'license': 'Owner permission',
+            'note': None,
+            'own': True},
+           {'type': 'real',
+            'h': 'Improve: central conversion, safer public errors',
+            'p': 'Good: answer centralizes success, missing entries and internal errors, like '
+                 'axum’s IntoResponse example. Improve: it exposes the SQLite error text to the '
+                 'client. Keep the detail in server diagnostics and return a stable generic '
+                 'message. A typed application error would separate storage details from the '
+                 'public contract.',
+            'code': 'fn answer(r: rusqlite::Result<Option<Value>>) -> (StatusCode, Json<Value>) {\n'
+                    '    match r {\n'
+                    '        Ok(Some(v)) => (StatusCode::OK, Json(v)),\n'
+                    '        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "no such '
+                    'entry"}))),\n'
+                    '        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": '
+                    'format!("sqlite: {e}")}))),\n'
+                    '    }\n'
+                    '}',
+            'repo': None,
+            'tag': '911d8146d36be95d5022ba651cf340078e6073bf',
+            'path': 'src/knowledge.rs',
+            'lines': (453, 459),
+            'license': 'Owner permission',
+            'note': None,
+            'own': True},
+           {'type': 'real',
+            'h': 'Improve: narrow the cache lock',
+            'p': 'After checking a cached stamp, answer keeps the map guard while calling a '
+                 'reader; the rest of the function also assembles data before inserting it. This '
+                 'serializes unrelated cache entries. Copy a hit inside a short scope; rebuild a '
+                 'miss outside the global map lock. Use per-entry coordination and recheck '
+                 'freshness to avoid duplicate or stale rebuilds. This is a synchronous contention '
+                 'finding, not evidence of a guard crossing .await. Be fair when you review: a '
+                 'comment in this file says the single lock is a chosen shortcut, to split if the '
+                 'wait is ever felt. For a one-user server that is a reasonable trade, so this is '
+                 'an option, not a bug.',
+            'code': '    let stamp = stamp(app)?;\n'
+                    '    let mut cache = cache.lock().unwrap_or_else(|e| e.into_inner());\n'
+                    '    if let Some((s, body)) = cache.get(route) && *s == stamp { return '
+                    'Ok(body.clone()) }\n'
+                    '    let notes = readers::read("pages", app, None).unwrap()?;\n'
+                    '    let body = if route == "/api/notes" { notes.to_string() } else {\n'
+                    '        let (meta, unknown) = meta::assemble(app, '
+                    'notes.as_array().unwrap())?;',
+            'repo': None,
+            'tag': '911d8146d36be95d5022ba651cf340078e6073bf',
+            'path': 'src/hub.rs',
+            'lines': (48, 53),
+            'license': 'Owner permission',
+            'note': None,
+            'own': True}],
+ 'problems': [{'type': 'better',
+               'prompt': 'Both print a cached count. Which releases the map lock before formatting '
+                         'the response?',
+               'a': 'use std::sync::Mutex;\n'
+                    'fn main() {\n'
+                    '    let cache = Mutex::new(7);\n'
+                    '    let guard = cache.lock().unwrap();\n'
+                    '    let body = format!("count={}", *guard);\n'
+                    '    println!("{body}");\n'
+                    '}',
+               'b': 'use std::sync::Mutex;\n'
+                    'fn main() {\n'
+                    '    let cache = Mutex::new(7);\n'
+                    '    let count = {\n'
+                    '        let guard = cache.lock().unwrap();\n'
+                    '        *guard\n'
+                    '    };\n'
+                    '    let body = format!("count={count}");\n'
+                    '    println!("{body}");\n'
+                    '}',
+               'answer': 'b',
+               'lint': None,
+               'good': 'B copies the needed value, releases the guard, then formats. This proves a '
+                       'std scope, not an async property.',
+               'bad': 'Formatting does not need exclusive access to the cache.',
+               'wrap': False},
+              {'type': 'fill',
+               'prompt': 'Keep storage details out of this public error body.',
+               'code': 'fn public_error(detail: &str) -> &str {\n'
+                       '    let _ = detail;\n'
+                       '    __\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    let body = public_error("db failed");\n'
+                       '    println!("{body}");\n'
+                       '}',
+               'bank': ['detail', '"internal error"', '"db failed"'],
+               'answer': ['"internal error"'],
+               'good': 'The boundary returns a stable message instead of backend details.',
+               'bad': 'The caller should not see the supplied detail.',
+               'output': ['internal error'],
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'A service rejects invalid input before storage changes. What is printed?',
+               'code': 'fn save(rows: &mut Vec<i32>, n: i32)\n'
+                       '    -> Result<(), String>\n'
+                       '{\n'
+                       '    if n < 0 {\n'
+                       '        return Err(String::from("invalid"));\n'
+                       '    }\n'
+                       '    rows.push(n);\n'
+                       '    Ok(())\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    let mut rows = vec![3];\n'
+                       '    println!("{:?}", save(&mut rows, -1));\n'
+                       '    println!("{}", rows.len());\n'
+                       '}',
+               'bank': ['Err("invalid")', 'Ok(())', '1', '2'],
+               'answer': ['Err("invalid")', '1'],
+               'good': 'Validation returns before mutation, so the stored row count stays one.',
+               'bad': 'Does the rejected request reach push?',
+               'wrap': False},
+              {'type': 'error',
+               'prompt': 'Which line tries to move shared app state into two owners?',
+               'code': 'use std::sync::Arc;\n'
+                       'fn main() {\n'
+                       '    let state = Arc::new(String::from("ok"));\n'
+                       '    let inbox = state;\n'
+                       '    let knowledge = state;\n'
+                       '    println!("{inbox} {knowledge}");\n'
+                       '}',
+               'line': 5,
+               'error_code': 'E0382',
+               'good': 'Assignment moves the Arc handle. Arc::clone creates a second handle to the '
+                       'same app state.',
+               'bad': 'Sharing the inner data still requires a handle for each owner.',
+               'wrap': False},
+              {'type': 'order',
+               'prompt': 'Run the boundary conversion after the service, then print the response.',
+               'head': ['fn load() -> Option<i32> { None }',
+                        'fn status(n: Option<i32>) -> i32 {',
+                        '    match n { Some(_) => 200, None => 404 }',
+                        '}',
+                        'fn main() {'],
+               'pool': ['    let result = load();',
+                        '    let response = status(result);',
+                        '    println!("{response}");'],
+               'tail': ['}'],
+               'output': ['404'],
+               'good': 'The service returns domain data; the boundary converts it exactly once.',
+               'bad': 'The converter must receive the service result before printing.'},
+              {'type': 'better',
+               'prompt': 'Both count saved rows. Which hides storage representation behind its '
+                         'API?',
+               'a': 'struct Store { rows: Vec<i32> }\n'
+                    'impl Store {\n'
+                    '    fn count(&self) -> usize {\n'
+                    '        self.rows.len()\n'
+                    '    }\n'
+                    '}\n'
+                    'fn saved(s: &Store) -> usize { s.count() }\n'
+                    'fn main() {\n'
+                    '    let s = Store { rows: vec![2, 4] };\n'
+                    '    println!("{}", saved(&s));\n'
+                    '}',
+               'b': 'struct Store { rows: Vec<i32> }\n'
+                    'fn saved(s: &Store) -> usize {\n'
+                    '    s.rows.len()\n'
+                    '}\n'
+                    'fn main() {\n'
+                    '    let s = Store { rows: vec![2, 4] };\n'
+                    '    println!("{}", saved(&s));\n'
+                    '}',
+               'answer': 'a',
+               'lint': None,
+               'good': 'A exposes a storage operation; changing the representation need not change '
+                       'saved.',
+               'bad': 'Which service reaches into the underlying vector?',
+               'wrap': False},
+              {'type': 'fill',
+               'prompt': 'The test must cover the missing-record response, not just success.',
+               'code': 'fn status(found: bool) -> i32 {\n'
+                       '    if found { 200 } else { 404 }\n'
+                       '}\n'
+                       '#[test]\n'
+                       'fn missing_record() {\n'
+                       '    assert_eq!(status(__), 404);\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    println!("{}", status(false));\n'
+                       '}',
+               'bank': ['true', 'false'],
+               'answer': ['false'],
+               'good': 'The checker also runs the test harness: false exercises the missing-record '
+                       'branch.',
+               'bad': 'Which input represents a record that is absent?',
+               'output': ['404'],
+               'wrap': False},
+              {'type': 'output',
+               'prompt': 'The handler uses a service result to choose its response. What does it '
+                         'print?',
+               'code': 'fn find(id: i32) -> Option<i32> {\n'
+                       '    if id == 3 { Some(12) } else { None }\n'
+                       '}\n'
+                       'struct Response { status: i32, count: i32 }\n'
+                       'fn handle(id: i32) -> Response {\n'
+                       '    match find(id) {\n'
+                       '        Some(count) => Response {\n'
+                       '            status: 200, count,\n'
+                       '        },\n'
+                       '        None => Response {\n'
+                       '            status: 404, count: 0,\n'
+                       '        },\n'
+                       '    }\n'
+                       '}\n'
+                       'fn main() {\n'
+                       '    let r = handle(3);\n'
+                       '    println!("{} {}", r.status, r.count);\n'
+                       '}',
+               'bank': ['200 12', '404 0', '200 3', '404 12'],
+               'answer': ['200 12'],
+               'good': 'The found value becomes response data; status describes the outcome.',
+               'bad': 'Keep the requested id distinct from the returned count.',
+               'wrap': False}]})
+
 COURSE.append({
     'part': 3,
     'id': 'smells',

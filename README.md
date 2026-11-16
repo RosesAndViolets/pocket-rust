@@ -103,6 +103,19 @@ They also quote [clap v4.5.20](https://github.com/clap-rs/clap/tree/v4.5.20)
 Both projects offer alternative licenses; these excerpts use their MIT terms.
 Every card links to its exact file and line range at the release tag.
 
+The web-server lessons quote [axum axum-v0.7.9](https://github.com/tokio-rs/axum/tree/axum-v0.7.9)
+(router, extractors, shared state, and centralized error responses), under the MIT license,
+© 2019 Axum Contributors. The [MIT notice](licenses/axum-MIT.txt) is included.
+
+They also quote [mini-redis v0.3.0](https://github.com/tokio-rs/mini-redis/tree/v0.3.0)
+(command/storage separation and short lock lifetime), under the MIT license,
+© 2020 Tokio Contributors. The [MIT notice](licenses/mini-redis-MIT.txt) is included.
+Public excerpts link to exact lines at those release tags and are shown, not compiled.
+
+“Your own server” shows short Websidian excerpts with the owner's permission, labelled
+“your code” without public links. They contain code only, with no personal data or file paths.
+Exercises use plain std analogues; their checks do not prove async runtime behavior.
+
 ## Running it locally
 
 ```sh
