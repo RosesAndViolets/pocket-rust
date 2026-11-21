@@ -5330,9 +5330,327 @@
    ]
   },
   {
+   "id": "rust-1-100",
+   "part": 1,
+   "n": 23,
+   "title": "What's new in Rust 1.100",
+   "summary": "Describe impossible results and use a few new helpers.",
+   "cards": [
+    {
+     "h": "A function that never returns",
+     "p": "<code>!</code> is the never type: it has no values. <code>-&gt; !</code> promises that a function never returns to its caller. <code>panic!</code> stops normal execution with an error message.",
+     "code": [
+      "fn stop() -> ! {",
+      "    panic!(\"cannot go on\");",
+      "}",
+      "fn main() {",
+      "    println!(\"stop is not called\");",
+      "}"
+     ],
+     "note": "Returning () still returns a value. Returning ! never does. The -&gt; ! form already worked before Rust 1.100."
+    },
+    {
+     "h": "An error that cannot exist",
+     "p": "Rust 1.100 lets you name <code>!</code> anywhere a type is allowed. <code>std::convert::Infallible</code> is now another name for <code>!</code>. An argument of this type can never be supplied. Likewise, Result&lt;T, !&gt; cannot hold an error, so an Ok binding needs no fallback.",
+     "code": [
+      "use std::convert::Infallible;",
+      "fn impossible(error: Infallible) -> ! {",
+      "    error",
+      "}",
+      "fn main() {",
+      "    println!(\"no error to pass in\");",
+      "}"
+     ],
+     "note": "In editions 2015–2021, an unconstrained type inferred from a never expression now falls back to ! instead of (). Explicit types avoid relying on fallback."
+    },
+    {
+     "h": "An arm can leave instead of giving a value",
+     "p": "<code>return</code>, <code>continue</code> and <code>panic!</code> produce no value on that path. Their type is <code>!</code>, which can fit the type needed by a match arm.",
+     "code": [
+      "fn show(input: Option<&str>) {",
+      "    let text = match input {",
+      "        Some(s) => s,",
+      "        None => return,",
+      "    };",
+      "    println!(\"{text}\");",
+      "}",
+      "fn main() { show(Some(\"hello\")); }"
+     ],
+     "note": "<code>continue;</code> skips the rest of the current round of the innermost loop; return leaves the function; panic! stops normal execution. These paths do not need to invent a value for the match."
+    },
+    {
+     "h": "Flip a boolean in place",
+     "p": "<code>bool::toggle</code> changes true to false or false to true. It takes a mutable boolean and returns (), not the changed boolean.",
+     "code": [
+      "let mut visible = true;",
+      "visible.toggle();",
+      "println!(\"{visible}\");"
+     ],
+     "note": null
+    },
+    {
+     "h": "Remove one edge, if present",
+     "p": "<code>str::trim_prefix</code> and <code>str::trim_suffix</code> return a borrowed &amp;str with one matching edge removed. A missing edge leaves the text unchanged; repeated edges are not all removed.",
+     "code": [
+      "let name = \"@@note.txt\";",
+      "let name = name.trim_prefix(\"@\");",
+      "let name = name.trim_suffix(\".txt\");",
+      "println!(\"{name}\");"
+     ],
+     "note": null
+    },
+    {
+     "h": "Build from each index",
+     "p": "<code>Vec::from_fn(length, closure)</code> calls the closure with each usize index, from zero upward, and stores the returned values.",
+     "code": [
+      "let marks: Vec<usize> =",
+      "    Vec::from_fn(4, |i| i * 3);",
+      "println!(\"{:?}\", marks);"
+     ],
+     "note": null
+    },
+    {
+     "h": "Transform an owned box",
+     "p": "<code>Box::map(boxed, closure)</code> consumes a box, passes its owned value to the closure, and returns a box of the result. The result can have a different type.",
+     "code": [
+      "let count = Box::new(5);",
+      "let large = Box::map(count, |n| n > 3);",
+      "println!(\"{large}\");"
+     ],
+     "note": null
+    },
+    {
+     "h": "Run an action when a value is dropped",
+     "p": "<code>core::mem::DropGuard::new(value, closure)</code> holds a value and calls the closure with it when the guard is dropped. Bind the guard to a name to keep it until the scope ends.",
+     "code": [
+      "use core::mem::DropGuard;",
+      "fn main() {",
+      "    let _note = DropGuard::new(\"done\", |s| {",
+      "        println!(\"{s}\");",
+      "    });",
+      "    println!(\"working\");",
+      "}"
+     ],
+     "note": "The leading underscore silences an unused-variable warning. A bare _ binding would drop the guard immediately. Cleanup runs on ordinary scope exit and unwinding, but not on process abort."
+    }
+   ],
+   "problems": [
+    {
+     "id": "rust-1-100-1",
+     "type": "fill",
+     "prompt": "Give this result an impossible error type.",
+     "good": "There is no value of ! to put in Err. The Ok pattern covers every possible result.",
+     "bad": "Both () and String have values, so those error types would require an Err case.",
+     "lines": [
+      "fn score() -> Result<i32, __> {",
+      "    Ok(12)",
+      "}",
+      "fn main() {",
+      "    let Ok(n) = score();",
+      "    println!(\"{n}\");",
+      "}"
+     ],
+     "bank": [
+      "!",
+      "()",
+      "String"
+     ],
+     "answer": [
+      "!"
+     ]
+    },
+    {
+     "id": "rust-1-100-2",
+     "type": "error",
+     "prompt": "Which line breaks the return-type promise?",
+     "good": "() is a value. A function returning ! must never return a value to its caller.",
+     "bad": "Look inside the function: does that statement return normally?",
+     "lines": [
+      "fn stop() -> ! {",
+      "    return ();",
+      "}",
+      "fn main() {}"
+     ],
+     "answer": 1,
+     "rustc": "error[E0308]: mismatched types\n --> src/main.rs:2:12\n  |\n1 | fn stop() -> ! {\n  |              - expected `!` because of return type\n2 |     return ();\n  |            ^^ expected `!`, found `()`\n  |\n  = note:   expected type `!`\n          found unit type `()`"
+    },
+    {
+     "id": "rust-1-100-3",
+     "type": "output",
+     "prompt": "What reaches the print?",
+     "good": "The missing item skips its loop round. The other arms supply numbers, which are increased before printing.",
+     "bad": "continue supplies no number and does not reach println.",
+     "lines": [
+      "let items = vec![Some(3), None, Some(8)];",
+      "for item in items {",
+      "    let n = match item {",
+      "        Some(n) => n,",
+      "        None => continue,",
+      "    };",
+      "    println!(\"{}\", n + 1);",
+      "}"
+     ],
+     "bank": [
+      "3",
+      "4",
+      "8",
+      "9",
+      "won't compile"
+     ],
+     "answer": [
+      "4",
+      "9"
+     ]
+    },
+    {
+     "id": "rust-1-100-4",
+     "type": "output",
+     "prompt": "What is the final flag after these events?",
+     "good": "Only true events flip the flag. Two flips bring it back to true; the false event does nothing.",
+     "bad": "Count the events that enter the if block, then track the flag after each flip.",
+     "lines": [
+      "let mut active = true;",
+      "for change in vec![true, false, true] {",
+      "    if change {",
+      "        active.toggle();",
+      "    }",
+      "}",
+      "println!(\"{active}\");"
+     ],
+     "bank": [
+      "true",
+      "false",
+      "()",
+      "won't compile"
+     ],
+     "answer": [
+      "true"
+     ]
+    },
+    {
+     "id": "rust-1-100-5",
+     "type": "better",
+     "prompt": "Which lets the caller keep a borrowed view of the text?",
+     "good": "Both remove only one marker and print sent!. B returns a slice of the existing message; A makes a new owned String.",
+     "bad": "Both use the same trimming helper. Compare their return types and whether they create new owned text.",
+     "a": [
+      "fn clean(text: &str) -> String {",
+      "    String::from(text.trim_suffix(\"!\"))",
+      "}",
+      "fn main() {",
+      "    let message = String::from(\"sent!!\");",
+      "    let view = clean(&message);",
+      "    println!(\"{view}\");",
+      "}"
+     ],
+     "b": [
+      "fn clean(text: &str) -> &str {",
+      "    text.trim_suffix(\"!\")",
+      "}",
+      "fn main() {",
+      "    let message = String::from(\"sent!!\");",
+      "    let view = clean(&message);",
+      "    println!(\"{view}\");",
+      "}"
+     ],
+     "answer": "b",
+     "judged": true
+    },
+    {
+     "id": "rust-1-100-6",
+     "type": "better",
+     "prompt": "Which makes success explicit without checking for an impossible failure?",
+     "good": "The Ok binding is exhaustive because Err cannot contain a value of !. No unwrap is needed.",
+     "bad": "The signature already rules out failure; use that fact in the binding.",
+     "a": [
+      "fn count() -> Result<usize, !> {",
+      "    Ok(6)",
+      "}",
+      "fn main() {",
+      "    let Ok(n) = count();",
+      "    println!(\"{n}\");",
+      "}"
+     ],
+     "b": [
+      "fn count() -> Result<usize, !> {",
+      "    Ok(6)",
+      "}",
+      "fn main() {",
+      "    let n = count().unwrap();",
+      "    println!(\"{n}\");",
+      "}"
+     ],
+     "answer": "a",
+     "judged": true
+    },
+    {
+     "id": "rust-1-100-7",
+     "type": "order",
+     "prompt": "Make the program print 15.",
+     "good": "Create [4, 5, 6], move it into a box, then replace the vector with its sum.",
+     "bad": "Each name must exist before it is moved into the next step.",
+     "head": [
+      "fn sum(v: Vec<usize>) -> usize {",
+      "    v.into_iter().sum()",
+      "}",
+      "fn main() {"
+     ],
+     "tail": [
+      "println!(\"{total}\");",
+      "}"
+     ],
+     "pool": [
+      "let nums = Vec::from_fn(3, |i| i + 4);",
+      "let boxed = Box::new(nums);",
+      "let total = Box::map(boxed, sum);"
+     ],
+     "accept": [
+      [
+       "let nums = Vec::from_fn(3, |i| i + 4);",
+       "let boxed = Box::new(nums);",
+       "let total = Box::map(boxed, sum);"
+      ]
+     ]
+    },
+    {
+     "id": "rust-1-100-8",
+     "type": "output",
+     "prompt": "What prints as the inner scope ends?",
+     "good": "The named guard lives until the inner scope ends. Its closure prints 10 before outside.",
+     "bad": "Creating the guard does not call the closure yet.",
+     "lines": [
+      "use core::mem::DropGuard;",
+      "fn main() {",
+      "    println!(\"open\");",
+      "    {",
+      "        let _guard = DropGuard::new(2, |n| {",
+      "            println!(\"{}\", n * 5);",
+      "        });",
+      "        println!(\"inside\");",
+      "    }",
+      "    println!(\"outside\");",
+      "}"
+     ],
+     "bank": [
+      "open",
+      "inside",
+      "outside",
+      "2",
+      "10"
+     ],
+     "answer": [
+      "open",
+      "inside",
+      "10",
+      "outside"
+     ]
+    }
+   ]
+  },
+  {
    "id": "cli-structure",
    "part": 2,
-   "n": 23,
+   "n": 24,
    "title": "A command-line tool: structure",
    "summary": "Study ripgrep and clap: crate boundaries, named arguments, and exit status.",
    "cards": [
@@ -5646,7 +5964,7 @@
   {
    "id": "cli-rules",
    "part": 2,
-   "n": 24,
+   "n": 25,
    "title": "A command-line tool: rules",
    "summary": "Parse once, keep errors useful, and test a pure core.",
    "cards": [
@@ -5992,7 +6310,7 @@
   {
    "id": "server-structure",
    "part": 2,
-   "n": 25,
+   "n": 26,
    "title": "A web server: structure",
    "summary": "Routes, extractors, shared state, and the service/storage boundary.",
    "cards": [
@@ -6326,7 +6644,7 @@
   {
    "id": "server-rules",
    "part": 2,
-   "n": 26,
+   "n": 27,
    "title": "A web server: rules",
    "summary": "Read async code; keep locks short and convert typed errors at the boundary.",
    "cards": [
@@ -6664,7 +6982,7 @@
   {
    "id": "server-own",
    "part": 2,
-   "n": 27,
+   "n": 28,
    "title": "Your own server",
    "summary": "Judge the AI-built Websidian server against the same rules.",
    "cards": [
@@ -7035,7 +7353,7 @@
   {
    "id": "data-structure",
    "part": 2,
-   "n": 28,
+   "n": 29,
    "title": "Calculations and data: structure",
    "summary": "A pipeline, a flat buffer with a shape, and split/work/join.",
    "cards": [
@@ -7363,7 +7681,7 @@
   {
    "id": "data-rules",
    "part": 2,
-   "n": 29,
+   "n": 30,
    "title": "Calculations and data: rules",
    "summary": "Reuse storage, constrain numbers, isolate workers, and choose arithmetic deliberately.",
    "cards": [
@@ -7712,7 +8030,7 @@
   {
    "id": "smells",
    "part": 3,
-   "n": 30,
+   "n": 31,
    "title": "Clippy's top smells",
    "summary": "Working code can still ask for too much. Let Clippy help.",
    "cards": [
@@ -7928,7 +8246,7 @@
   {
    "id": "borrow-fights",
    "part": 3,
-   "n": 31,
+   "n": 32,
    "title": "Fighting the borrow checker the wrong way",
    "summary": "Shorten borrows and express ownership before adding copies or shared mutation.",
    "cards": [
@@ -8205,7 +8523,7 @@
   {
    "id": "structure-smells",
    "part": 3,
-   "n": 32,
+   "n": 33,
    "title": "Structure smells",
    "summary": "Review responsibilities, types, dispatch and lock scope against a concrete need.",
    "cards": [
@@ -8588,7 +8906,7 @@
   {
    "id": "ai-review",
    "part": 3,
-   "n": 33,
+   "n": 34,
    "title": "\"AI wrote this\"",
    "summary": "Read the whole short program, locate its smell, then choose the repair.",
    "cards": [
@@ -8823,7 +9141,7 @@
   {
    "id": "steer-ai",
    "part": 3,
-   "n": 34,
+   "n": 35,
    "title": "Steering AI",
    "summary": "Ask for contracts, errors and ownership first; judge the resulting before/after code.",
    "cards": [

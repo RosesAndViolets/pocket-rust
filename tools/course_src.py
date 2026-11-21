@@ -2806,6 +2806,183 @@ fn main() {
     ],
 })
 
+# Rust 1.100: the never type and small standard-library helpers.
+COURSE.append({
+    'part': 1,
+    'id': 'rust-1-100',
+    'title': "What's new in Rust 1.100",
+    'summary': 'Describe impossible results and use a few new helpers.',
+    'cards': [
+        card('A function that never returns',
+             '`!` is the never type: it has no values. `-> !` promises that a function never returns to its caller. `panic!` stops normal execution with an error message.',
+             '''fn stop() -> ! {
+    panic!("cannot go on");
+}
+fn main() {
+    println!("stop is not called");
+}''',
+             'Returning () still returns a value. Returning ! never does. The -> ! form already worked before Rust 1.100.'),
+        card('An error that cannot exist',
+             'Rust 1.100 lets you name `!` anywhere a type is allowed. `std::convert::Infallible` is now another name for `!`. An argument of this type can never be supplied. Likewise, Result<T, !> cannot hold an error, so an Ok binding needs no fallback.',
+             """use std::convert::Infallible;
+fn impossible(error: Infallible) -> ! {
+    error
+}
+fn main() {
+    println!("no error to pass in");
+}""",
+             'In editions 2015–2021, an unconstrained type inferred from a never expression now falls back to ! instead of (). Explicit types avoid relying on fallback.'),
+        card('An arm can leave instead of giving a value',
+             '`return`, `continue` and `panic!` produce no value on that path. Their type is `!`, which can fit the type needed by a match arm.',
+             '''fn show(input: Option<&str>) {
+    let text = match input {
+        Some(s) => s,
+        None => return,
+    };
+    println!("{text}");
+}
+fn main() { show(Some("hello")); }''',
+             '`continue;` skips the rest of the current round of the innermost loop; return leaves the function; panic! stops normal execution. These paths do not need to invent a value for the match.'),
+        card('Flip a boolean in place',
+             '`bool::toggle` changes true to false or false to true. It takes a mutable boolean and returns (), not the changed boolean.',
+             '''let mut visible = true;
+visible.toggle();
+println!("{visible}");'''),
+        card('Remove one edge, if present',
+             '`str::trim_prefix` and `str::trim_suffix` return a borrowed &str with one matching edge removed. A missing edge leaves the text unchanged; repeated edges are not all removed.',
+             '''let name = "@@note.txt";
+let name = name.trim_prefix("@");
+let name = name.trim_suffix(".txt");
+println!("{name}");'''),
+        card('Build from each index',
+             '`Vec::from_fn(length, closure)` calls the closure with each usize index, from zero upward, and stores the returned values.',
+             '''let marks: Vec<usize> =
+    Vec::from_fn(4, |i| i * 3);
+println!("{:?}", marks);'''),
+        card('Transform an owned box',
+             '`Box::map(boxed, closure)` consumes a box, passes its owned value to the closure, and returns a box of the result. The result can have a different type.',
+             '''let count = Box::new(5);
+let large = Box::map(count, |n| n > 3);
+println!("{large}");'''),
+        card('Run an action when a value is dropped',
+             '`core::mem::DropGuard::new(value, closure)` holds a value and calls the closure with it when the guard is dropped. Bind the guard to a name to keep it until the scope ends.',
+             '''use core::mem::DropGuard;
+fn main() {
+    let _note = DropGuard::new("done", |s| {
+        println!("{s}");
+    });
+    println!("working");
+}''',
+             'The leading underscore silences an unused-variable warning. A bare _ binding would drop the guard immediately. Cleanup runs on ordinary scope exit and unwinding, but not on process abort.'),
+    ],
+    'problems': [
+        fill('Give this result an impossible error type.',
+             '''fn score() -> Result<i32, __> {
+    Ok(12)
+}
+fn main() {
+    let Ok(n) = score();
+    println!("{n}");
+}''',
+             ['!', '()', 'String'], ['!'],
+             'There is no value of ! to put in Err. The Ok pattern covers every possible result.',
+             'Both () and String have values, so those error types would require an Err case.',
+             output=['12'], wrap=False),
+        err('Which line breaks the return-type promise?',
+            '''fn stop() -> ! {
+    return ();
+}
+fn main() {}''', 2, 'E0308',
+            '() is a value. A function returning ! must never return a value to its caller.',
+            'Look inside the function: does that statement return normally?'),
+        out('What reaches the print?',
+            '''let items = vec![Some(3), None, Some(8)];
+for item in items {
+    let n = match item {
+        Some(n) => n,
+        None => continue,
+    };
+    println!("{}", n + 1);
+}''', ['3', '4', '8', '9', WONT], ['4', '9'],
+            'The missing item skips its loop round. The other arms supply numbers, which are increased before printing.',
+            'continue supplies no number and does not reach println.'),
+        out('What is the final flag after these events?',
+            """let mut active = true;
+for change in vec![true, false, true] {
+    if change {
+        active.toggle();
+    }
+}
+println!("{active}");""",
+            ['true', 'false', '()', WONT], ['true'],
+            'Only true events flip the flag. Two flips bring it back to true; the false event does nothing.',
+            'Count the events that enter the if block, then track the flag after each flip.'),
+        better('Which lets the caller keep a borrowed view of the text?',
+               """fn clean(text: &str) -> String {
+    String::from(text.trim_suffix("!"))
+}
+fn main() {
+    let message = String::from("sent!!");
+    let view = clean(&message);
+    println!("{view}");
+}""",
+               """fn clean(text: &str) -> &str {
+    text.trim_suffix("!")
+}
+fn main() {
+    let message = String::from("sent!!");
+    let view = clean(&message);
+    println!("{view}");
+}""",
+               'b', None,
+               'Both remove only one marker and print sent!. B returns a slice of the existing message; A makes a new owned String.',
+               'Both use the same trimming helper. Compare their return types and whether they create new owned text.'),
+        better('Which makes success explicit without checking for an impossible failure?',
+               '''fn count() -> Result<usize, !> {
+    Ok(6)
+}
+fn main() {
+    let Ok(n) = count();
+    println!("{n}");
+}''',
+               '''fn count() -> Result<usize, !> {
+    Ok(6)
+}
+fn main() {
+    let n = count().unwrap();
+    println!("{n}");
+}''',
+               'a', None,
+               'The Ok binding is exhaustive because Err cannot contain a value of !. No unwrap is needed.',
+               'The signature already rules out failure; use that fact in the binding.'),
+        order('Make the program print 15.',
+              ['fn sum(v: Vec<usize>) -> usize {',
+               '    v.into_iter().sum()', '}',
+               'fn main() {'],
+              ['let nums = Vec::from_fn(3, |i| i + 4);',
+               'let boxed = Box::new(nums);',
+               'let total = Box::map(boxed, sum);'],
+              ['println!("{total}");', '}'], ['15'],
+              'Create [4, 5, 6], move it into a box, then replace the vector with its sum.',
+              'Each name must exist before it is moved into the next step.'),
+        out('What prints as the inner scope ends?',
+            '''use core::mem::DropGuard;
+fn main() {
+    println!("open");
+    {
+        let _guard = DropGuard::new(2, |n| {
+            println!("{}", n * 5);
+        });
+        println!("inside");
+    }
+    println!("outside");
+}''', ['open', 'inside', 'outside', '2', '10'],
+            ['open', 'inside', '10', 'outside'],
+            'The named guard lives until the inner scope ends. Its closure prints 10 before outside.',
+            'Creating the guard does not call the closure yet.', wrap=False),
+    ],
+})
+
 # Part 2 / CLI: pinned excerpts; std-only applications.
 COURSE.append({'part': 2,
  'id': 'cli-structure',
@@ -6012,6 +6189,9 @@ fn main() {
 
 # Tokens a lesson must not use before the lesson that teaches them (1-based lesson number).
 GATES = [
+    # Named never types. Macros, !bool, and old distractor chips stay legal.
+    (r"(?m)(?:->|[<,:=&(\[]|\b(?:as|const|mut))\s*!(?=\s*(?:[,;>=)\]}{]|$))", 23),
+    (r"\b(?:toggle|trim_prefix|trim_suffix|from_fn|DropGuard|Infallible)\b|\bBox(?:\s*::\s*<[^;\n]+>)?\s*::\s*map\b", 23),
     (r"\bi32\b|\bf64\b|\bbool\b|\btrue\b|\bfalse\b|\bas\b", 2),
     (r"\breturn\b|->", 3),
     (r"\bif\b|\belse\b|\bloop\b|\bbreak\b|\bwhile\b|\bfor\b|\.\.|\+=|-=|==|&&|\|\|", 4),
